@@ -1,0 +1,203 @@
+@import 'tailwindcss';
+
+/* QuizArena: oscuro "noche de torneo" + colores neón + bordes gruesos y sombras duras (estilo sticker). */
+@theme {
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --color-ink: #120e2b;
+  --color-ink2: #1d1745;
+  --color-ink3: #2e2569;
+  --color-edge: #0a0720;
+  --color-paper: #fff7e6;
+  --color-lime: #c6ff3d;
+  --color-pink: #ff4f9a;
+  --color-cyan: #38dbff;
+  --color-sun: #ffd43b;
+  --color-violet: #8467ff;
+  --color-fire: #ff8a3d;
+}
+
+@layer base {
+  html, body, #root { min-height: 100%; }
+  body {
+    font-family: var(--font-body);
+    color: var(--color-paper);
+    background:
+      radial-gradient(900px 500px at 10% -10%, rgb(255 79 154 / 0.28), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgb(56 219 255 / 0.2), transparent 60%),
+      radial-gradient(700px 600px at 50% 120%, rgb(132 103 255 / 0.3), transparent 60%),
+      var(--color-ink);
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+  /* puntitos de fondo, como cuaderno cuadriculado de noche */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: radial-gradient(rgb(255 255 255 / 0.07) 1.5px, transparent 1.5px);
+    background-size: 26px 26px;
+  }
+  #root { position: relative; z-index: 1; }
+  h1, h2, h3, .font-display { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; }
+  button { cursor: pointer; font: inherit; }
+  /* iconos SVG en línea con el texto */
+  .lucide { vertical-align: -0.14em; flex-shrink: 0; }
+  ::selection { background: var(--color-pink); color: white; }
+}
+
+@layer components {
+  .btn {
+    --btn: var(--color-lime);
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    font-family: var(--font-display); font-weight: 800; font-size: 1.05rem;
+    color: var(--color-edge); background: var(--btn);
+    border: 3px solid var(--color-edge); border-radius: 16px;
+    padding: 0.65rem 1.3rem;
+    box-shadow: 0 5px 0 var(--color-edge);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.15s;
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 0 var(--color-edge); filter: brightness(1.06); }
+  .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--color-edge); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-pink { --btn: var(--color-pink); }
+  .btn-cyan { --btn: var(--color-cyan); }
+  .btn-sun { --btn: var(--color-sun); }
+  .btn-big { font-size: 1.5rem; padding: 0.9rem 2rem; border-radius: 20px; }
+  .btn-ghost {
+    --btn: transparent; color: var(--color-paper); box-shadow: none;
+    border-color: rgb(255 255 255 / 0.25); font-size: 0.95rem; padding: 0.4rem 0.9rem; border-radius: 12px;
+  }
+  .btn-ghost:hover:not(:disabled) { transform: none; box-shadow: none; background: rgb(255 255 255 / 0.1); }
+  .btn-ghost:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
+
+  .card {
+    background: var(--color-paper); color: var(--color-edge);
+    border: 3px solid var(--color-edge); border-radius: 22px;
+    box-shadow: 6px 6px 0 var(--color-edge);
+  }
+  .card-dark {
+    background: rgb(29 23 69 / 0.85); backdrop-filter: blur(6px);
+    border: 3px solid rgb(255 255 255 / 0.1); border-radius: 22px;
+  }
+  .input {
+    width: 100%; background: white; color: var(--color-edge);
+    border: 3px solid var(--color-edge); border-radius: 14px;
+    padding: 0.7rem 1rem; font-weight: 700; font-size: 1.05rem;
+    box-shadow: 0 4px 0 var(--color-edge);
+  }
+  .input::placeholder { color: rgb(10 7 32 / 0.6); font-weight: 500; }
+  .input:focus, .tile:focus-visible, .power-card:focus-visible, .btn:focus-visible, .opt:focus-visible, .chip:focus-visible, .tok:focus-visible { outline: 4px solid var(--color-cyan); outline-offset: 3px; }
+  .sticker {
+    display: inline-block; font-family: var(--font-display); font-weight: 800; font-size: 0.75rem;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--color-sun); color: var(--color-edge);
+    border: 2px solid var(--color-edge); border-radius: 10px; padding: 0.1rem 0.55rem;
+    transform: rotate(-3deg);
+  }
+
+  /* Botones de respuesta: color + forma, para no depender solo del color */
+  .opt {
+    --c: var(--color-pink);
+    display: flex; align-items: center; gap: 0.9rem; width: 100%; text-align: left;
+    padding: 1rem 1.1rem; min-height: 4.5rem;
+    font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; line-height: 1.15;
+    color: var(--color-edge); background: var(--c);
+    border: 3px solid var(--color-edge); border-radius: 18px; box-shadow: 0 6px 0 var(--color-edge);
+    transition: transform 0.08s, box-shadow 0.08s, opacity 0.2s, filter 0.2s;
+  }
+  .opt:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 0 var(--color-edge); }
+  .opt:active:not(:disabled), .opt[aria-pressed='true'] { transform: translateY(5px); box-shadow: 0 1px 0 var(--color-edge); }
+  .opt[aria-pressed='true'] { outline: 4px solid white; outline-offset: 3px; }
+  .opt[data-state='wrong'] { opacity: 0.3; filter: grayscale(0.7); }
+  .opt[data-state='right'] { outline: 5px solid white; outline-offset: 3px; }
+  .opt .shape {
+    flex: none; display: grid; place-items: center; width: 2.4rem; height: 2.4rem;
+    background: rgb(255 255 255 / 0.55); border: 3px solid var(--color-edge); border-radius: 12px; font-size: 1.1rem;
+  }
+
+  /* Fichas arrastrables y zonas de destino (arrastra, categorizar, reordenar) */
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; text-align: left;
+    font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; line-height: 1.15;
+    color: var(--color-edge); background: white; padding: 0.45rem 0.85rem;
+    border: 3px solid var(--color-edge); border-radius: 12px; box-shadow: 0 3px 0 var(--color-edge);
+    cursor: grab; touch-action: manipulation; user-select: none;
+  }
+  .chip[aria-pressed='true'] { background: var(--color-lime); transform: translateY(-3px); box-shadow: 0 6px 0 var(--color-edge); }
+  .chip:active { cursor: grabbing; }
+  /* Palabra tocable del texto interactivo */
+  .tok {
+    font: inherit; color: inherit; padding: 0.05rem 0.4rem; border: 3px solid transparent; border-radius: 10px;
+    background: rgb(255 255 255 / 0.06); touch-action: manipulation; transition: background 0.1s, transform 0.1s;
+  }
+  .tok:hover:not(:disabled) { background: rgb(255 255 255 / 0.16); }
+  .tok[aria-pressed='true'] { background: var(--color-lime); color: var(--color-edge); border-color: var(--color-edge); font-weight: 700; transform: translateY(-2px); }
+  /* Bloque de código: mismo lenguaje visual que .card-dark, colores del neón */
+  .code-block { color: var(--color-paper); background: var(--color-edge); border: 3px solid rgb(255 255 255 / 0.12); border-radius: 18px; font-family: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace; text-align: left; }
+  .code-block pre { margin: 0; tab-size: 2; min-width: max-content; }
+  .code-line { display: block; padding: 0 1rem 0 0; counter-increment: line; white-space: pre; }
+  .code-line::before { content: counter(line); display: inline-block; width: 2.6rem; padding-right: 0.8rem; margin-right: 0.8rem; text-align: right; color: rgb(255 255 255 / 0.35); border-right: 1px solid rgb(255 255 255 / 0.1); user-select: none; }
+  .code-block code { counter-reset: line; display: block; }
+  .tk-k { color: var(--color-pink); font-weight: 700; }
+  .tk-s { color: var(--color-lime); }
+  .tk-n { color: var(--color-sun); }
+  .tk-c { color: rgb(255 247 230 / 0.62); font-style: italic; }
+  .tk-f { color: var(--color-cyan); }
+  .tk-y { color: #b9a4ff; }
+  .tk-t { color: var(--color-cyan); }
+  /* Ficha de tipo de pregunta (paleta del editor): color de su categoría, se inclina y se hunde al presionar */
+  .tile {
+    display: flex; align-items: center; gap: 0.5rem; width: 100%; min-height: 2.9rem; padding: 0.35rem 0.55rem; text-align: left;
+    font-family: var(--font-display); font-weight: 800; font-size: 0.88rem; line-height: 1.05;
+    color: var(--color-edge); background: var(--c); border: 3px solid var(--color-edge); border-radius: 14px; box-shadow: 0 3px 0 var(--color-edge);
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.08s;
+  }
+  .tile-icon { flex: none; display: grid; place-items: center; width: 1.7rem; height: 1.7rem; font-size: 1rem; background: rgb(255 255 255 / 0.55); border: 2px solid var(--color-edge); border-radius: 9px; }
+  .tile:hover { transform: translateY(-3px) rotate(-1.5deg); box-shadow: 0 7px 0 var(--color-edge); }
+  .tile:hover .tile-icon { background: white; }
+  span:nth-child(even) > .tile:hover { transform: translateY(-3px) rotate(1.5deg); }
+  .tile:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--color-edge); }
+  /* Chispas de poderes: salen del centro y se desvanecen */
+  .spark { position: absolute; width: 8px; height: 8px; border: 2px solid var(--color-edge); border-radius: 2px; opacity: 0; animation: spark 0.75s ease-out both; }
+  @keyframes spark { 0% { opacity: 1; transform: translate(0, 0) scale(0.4) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1) rotate(200deg); } }
+  .power-armed { animation: glow 1.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 6px 6px 0 var(--color-edge), 0 0 22px 4px rgb(255 255 255 / 0.45); } }
+  .power-card:hover:not(:disabled) { transform: translateY(-2px) rotate(0.5deg); }
+  .power-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 2px 2px 0 var(--color-edge); }
+  /* Papa caliente: bomba que late (más rápido al final), explosión y sacudida */
+  .bomb-tick { display: inline-block; animation: bombtick 1s ease-in-out infinite; transform-origin: 50% 60%; }
+  .bomb-tick.hot { animation-duration: 0.35s; color: var(--color-fire); }
+  @keyframes bombtick { 0%, 100% { transform: scale(1) rotate(-6deg); } 50% { transform: scale(1.15) rotate(6deg); } }
+  .boom-layer { position: fixed; inset: 0; z-index: 40; pointer-events: none; display: grid; place-items: center; overflow: hidden; }
+  .boom-flash { position: absolute; inset: 0; background: radial-gradient(circle, rgb(255 247 230 / 0.85), rgb(255 138 61 / 0.55) 35%, transparent 70%); animation: boomflash 0.6s ease-out both; }
+  @keyframes boomflash { from { opacity: 1; } to { opacity: 0; } }
+  .boom-ring { position: absolute; width: 40vmin; height: 40vmin; border-radius: 50%; border: 10px solid var(--color-fire); animation: boomring 0.7s ease-out both; }
+  .boom-ring + .boom-ring { border-color: var(--color-sun); animation-delay: 0.08s; }
+  @keyframes boomring { from { transform: scale(0.1); opacity: 1; } to { transform: scale(3); opacity: 0; } }
+  .shake { animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+  @keyframes shake { 10%, 90% { transform: translate(-2px, 1px); } 20%, 80% { transform: translate(4px, -2px); } 30%, 50%, 70% { transform: translate(-7px, 3px) rotate(-1deg); } 40%, 60% { transform: translate(7px, -3px) rotate(1deg); } }
+  .out-row { opacity: 0.55; filter: grayscale(0.8); }
+  .zone {
+    border: 3px dashed rgb(255 255 255 / 0.3); border-radius: 14px; transition: background 0.15s, border-color 0.15s;
+  }
+  .zone-over { background: rgb(198 255 61 / 0.18); border-color: var(--color-lime); }
+
+  /* Pantalla del profe pensada para proyector: respuestas más grandes */
+  .projector .opt { font-size: 1.75rem; min-height: 6rem; }
+  .confetti-layer { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 30; }
+  .confetti { position: absolute; top: -6vh; height: 1.3em; border: 2px solid var(--color-edge); border-radius: 3px; animation: fall linear both; }
+  @keyframes fall { to { transform: translateY(112vh) rotate(var(--rot)); } }
+
+  .pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  @keyframes pop { from { transform: scale(0.6) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .float { animation: float 4s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-8px) rotate(2deg); } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop, .float, .power-armed, .bomb-tick, .shake { animation: none; }
+  .boom-flash, .boom-ring { display: none; }
+  .spark { display: none; }
+  .confetti-layer { display: none; }
+  .btn, .opt, .tile { transition: none; }
+}

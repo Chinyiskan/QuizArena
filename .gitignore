@@ -1,0 +1,13 @@
+node_modules
+client-dist
+# base de datos: lecciones y reportes con nombres de estudiantes
+data
+# credenciales del profe (contraseña y clave 2FA)
+.env
+.env.*
+!.env.example
+# ajustes locales de Claude Code (los agentes de .claude/agents sí se suben)
+.claude/settings.local.json
+*.log
+Thumbs.db
+.DS_Store

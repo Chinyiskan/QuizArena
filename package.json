@@ -1,0 +1,45 @@
+{
+  "name": "quizarena",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preinstall": "node -e \"if(!/pnpm/.test(process.env.npm_config_user_agent||'')){console.error('Este proyecto usa solo pnpm');process.exit(1)}\"",
+    "dev": "concurrently -n api,web -c magenta,cyan \"tsx watch --env-file-if-exists=.env server/index.ts\" \"vite\"",
+    "build": "vite build",
+    "start": "tsx --env-file-if-exists=.env server/index.ts",
+    "clase": "node scripts/clase.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx shared/grade.test.ts && tsx shared/insecure-context.test.ts && tsx shared/powers.test.ts && tsx server/auth.test.ts && tsx client/src/highlight.test.ts && tsx server/powers-engine.test.ts",
+    "test:live": "tsx --env-file-if-exists=.env server/smoke.test.ts && tsx --env-file-if-exists=.env server/smoke-hw.test.ts && tsx --env-file-if-exists=.env server/smoke-auto.test.ts && tsx --env-file-if-exists=.env server/smoke-power.test.ts && tsx --env-file-if-exists=.env server/smoke-bomb.test.ts && tsx --env-file-if-exists=.env server/smoke-security.test.ts",
+    "seed": "tsx server/seed.ts",
+    "bots": "tsx server/bots.ts",
+    "totp": "tsx server/totp.ts"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@fastify/static": "^8.0.0",
+    "fastify": "^5.0.0",
+    "lucide-react": "^1.51.0",
+    "motion": "^12.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}
