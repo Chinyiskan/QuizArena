@@ -13,8 +13,9 @@ const mcq = (id: string) => ({ id, type: 'mcq', prompt: id, time: 30, points: 10
 const lesson = await post('/api/lessons', { title: 'Blindaje', emoji: 'flask', questions: [mcq('q1'), mcq('q2'), mcq('q3')] })
 const { pin } = await post('/api/rooms', { lessonId: lesson.id })
 const host = hostSocket()
-let st: any
+let st: any, dash: any
 host.on('state', (s) => (st = s))
+host.on('dash', (d) => (dash = d))
 assert.ok(await ack(host, 'host:open', pin))
 
 // 1. un objeto con toString inválido hacía lanzar String() y tumbaba el proceso entero
@@ -60,6 +61,13 @@ host.emit('host:next', pin)
 await wait(300)
 assert.equal(st.phase, 'question', 'el doble clic no cierra la pregunta recién abierta')
 
+// 5b. el panel del profe ('dash': solución + quién respondió) llega SOLO al profe, nunca a un estudiante
+let leaked = false
+for (const sock of [vic, bad]) sock.on('dash', () => (leaked = true))
+await until(() => !!dash?.key, 'el profe recibe el panel con la pregunta')
+assert.equal(dash.key.data.correct, 1, 'el profe ve la solución durante la pregunta')
+assert.equal(st.question.data.correct, -1, 'los estudiantes no')
+
 // con la víctima en línea sin responder, la respuesta de otro no cierra la pregunta
 let meBad: any
 bad.on('me', (m) => (meBad = m))
@@ -81,6 +89,7 @@ await until(() => st.phase === 'reveal', 'al responder el último que queda, se 
 assert.equal(st.credit[v.id], 1)
 assert.equal(st.credit[imp.id], undefined, 'el expulsado no se califica')
 
+assert.equal(leaked, false, "ningún estudiante recibió 'dash'")
 assert.ok(await alive(), 'servidor vivo al final')
 ;[vic, bad, host].forEach((s) => s.disconnect())
 await fetch(BASE + `/api/rooms/${pin}`, { method: 'DELETE', headers: bare })

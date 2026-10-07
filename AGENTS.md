@@ -134,6 +134,16 @@ Regla de oro para todos: cambio mínimo que funcione, reutilizar lo que ya exist
 - **Código**: campo opcional `code: { lang, text }` (máx. 1500 caracteres) en cualquier pregunta, como `passage`; lenguajes en `CODE_LANGS` (`shared/questions.ts`). Se muestra con `CodeBlock` (`ui.tsx`) en celular, proyector y tarea, con números de línea y scroll horizontal. Resaltado propio sin dependencias en `client/src/highlight.tsx` (comentarios, cadenas, números, palabras clave; no entiende gramáticas); prueba en `highlight.test.ts`. Colores `.tk-*` en `index.css`.
 - **Tooltip** `Tip` (`ui.tsx`): hover con 250 ms de espera o foco de teclado, Escape cierra, se mantiene dentro de la pantalla, `aria-describedby`. Los textos de ayuda de cada tipo viven en `client/src/types/help.ts` (un tipo nuevo también necesita su entrada ahí: `TYPE_HELP` es `Record<TypeId,…>` y el typecheck lo exige).
 
+## Panel del profe (mesa de control, no pantalla de proyector)
+
+El profe **no comparte pantalla** (clases por Meet): su panel es para él. `Control.tsx` (en vivo) y `HwPanel.tsx` (tarea).
+
+- **En vivo** (`pages/Control.tsx`): temporizador, pregunta, contadores EN VIVO (contestaron / bien / mal / faltan, con "sin conexión" aparte), acierto del grupo, tabla de **todos** los estudiantes con estado (Pensando… / Bien / Parcial / Mal / Sin responder / Desconectado / Eliminado; siempre icono + color), puntos ganados, racha, filtro "solo los que faltan", botón X para sacar a alguien, **respuesta correcta visible solo para el profe**, distribución en vivo (opción múltiple, V/F, selección múltiple), "equivocaciones más comunes" (`answerLabel`) y explicación. Atajo: **barra espaciadora** = cerrar/siguiente. En el podio, "Ver reporte". Compacto (solo iconos) en pantallas < sm.
+- **Evento `dash`** (`dashOf` en `game.ts`): se emite SOLO al canal `pin:host`, justo después de `state`: `answered[]`, `credit{}` (cada respuesta se califica al llegar: `Answer.credit`), `key` (la pregunta CON solución), `dist`, `wrong[]`, `reportId`. **Nunca va a un estudiante**; `server/dash.test.ts` y `smoke-security.test.ts` lo vigilan. El cliente lo lee con `useDash()`.
+- **Tarea** (`HwPanel.tsx`): contadores (sin empezar / en curso / terminaron / acierto), aviso de "quietos" (5+ min sin avanzar, `Player.lastAt`, llega como `idleMs` relativo) y desconectados, filtros con contadores, orden (puntos / más atrasados / más quietos / nombre), "va en la 3/6 · hace 2 min", X para sacar, "Tabla completa" (Reporte) y, en "preguntas que más costaron", las **equivocaciones más repetidas** (`Result.pick`, guardado solo si falló).
+- **Reporte** (`Report.tsx`): se actualiza solo cada 5 s mientras la partida/tarea siga en curso.
+- `answerLabel(q, valor)` (shared/questions.ts) da el texto de una respuesta solo donde se lee como frase (mcq, multi, tf, open, fill, dropdown, drag); en los demás tipos no hay texto útil y no se lista.
+
 ## Modos de partida, poderes y papa caliente (solo en vivo)
 
 - **Estilo** (`Room.style`, `shared/powers.ts` → `STYLES`): `classic` (sin poderes), `powers` (por defecto) o `bomb` (papa caliente). Lo elige el profe en el lobby (`host:style`); a mitad de partida se ignora. `view()` expone `style` y `powers` (= style 'powers').

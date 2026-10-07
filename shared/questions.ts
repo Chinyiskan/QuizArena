@@ -211,6 +211,24 @@ export function grade(q: Question, answer: unknown): number {
   return (t.grade as (d: unknown, a: unknown) => number)(q.data, parsed.data)
 }
 
+/**
+ * Texto corto de lo que respondió un estudiante, para el panel del profe ("la equivocación más común fue…").
+ * Solo para tipos donde una respuesta se lee como una frase; en los demás (arrastrar, ordenar, relacionar…) no hay un texto útil.
+ */
+export function answerLabel(q: Question, answer: unknown): string | undefined {
+  const parsed = types[q.type].answer.safeParse(answer)
+  if (!parsed.success) return undefined
+  const a = parsed.data as any
+  switch (q.type) {
+    case 'mcq': return q.data.options[a]
+    case 'tf': return a ? 'Verdadero' : 'Falso'
+    case 'multi': return a.length ? [...new Set<number>(a)].sort().map((i) => q.data.options[i]).filter(Boolean).join(' + ') : '(ninguna)'
+    case 'open': return a.trim().slice(0, 40) || '(vacío)'
+    case 'fill': case 'dropdown': case 'drag': return a.map((x: string) => x.trim() || '—').join(' · ').slice(0, 60)
+    default: return undefined
+  }
+}
+
 /** Problemas de una pregunta, en español. Se usa en el editor (antes de guardar) y en el servidor. */
 function problemsOf(q: Question): string[] {
   const out: string[] = []

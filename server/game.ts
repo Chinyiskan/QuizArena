@@ -1,12 +1,12 @@
 import { randomInt, randomUUID } from 'node:crypto'
 import type { Server } from 'socket.io'
-import { grade, hideAnswer, score, type Lesson, type Question } from '../shared/questions.ts'
+import { answerLabel, grade, hideAnswer, score, type Lesson, type Question } from '../shared/questions.ts'
 import { STEAL_MIN_LEFT, STYLES, bombOver, hideWrong, pickBombs, rollDrop, stealAmount, type Power, type Style } from '../shared/powers.ts'
 import { hwRooms, reports } from './db.ts'
 
 export type Phase = 'lobby' | 'question' | 'reveal' | 'podium'
 export type Mode = 'live' | 'homework'
-type Result = { credit: number; gained: number }
+type Result = { credit: number; gained: number; pick?: string } // pick: texto de lo que respondió (solo si falló; para el panel del profe)
 type Player = {
   id: string; name: string; avatar: string; score: number; streak: number; online: boolean
   key?: string // secreta: solo la conoce el celular del jugador; el id es público (va en el ranking) y no basta para reconectarse
@@ -18,8 +18,9 @@ type Player = {
   power?: Power
   armed?: Power
   out?: number // papa caliente: pregunta en la que explotó (desde ahí, solo observa)
+  lastAt?: number // tarea: última actividad (para ver quién lleva rato quieto)
 }
-type Answer = { value: unknown; at: number }
+type Answer = { value: unknown; at: number; credit: number } // credit: se califica al llegar, así el profe ve bien/mal EN VIVO
 
 type Room = {
   pin: string
@@ -136,7 +137,7 @@ export function addPlayer(room: Room, name: string, avatar: string, id?: string)
   const back = id !== undefined && room.players.get(id)
   if (back) return ((back.key ??= randomUUID()), back) // reconexión
   if (room.mode === 'homework' ? room.closed : room.phase === 'podium') return 'locked' // en vivo: entrada tardía hasta el podio
-  const p: Player = { id: randomUUID(), key: randomUUID(), name: name.slice(0, 20), avatar, score: 0, streak: 0, online: true, pos: 0, awaiting: false, results: [] }
+  const p: Player = { id: randomUUID(), key: randomUUID(), name: name.slice(0, 20), avatar, score: 0, streak: 0, online: true, pos: 0, awaiting: false, results: [], lastAt: Date.now() }
   if (room.mode === 'live' && room.style === 'bomb' && room.index >= 0) p.out = room.index // papa caliente ya empezada: entra a observar
   room.players.set(p.id, p)
   persist(room)
@@ -211,15 +212,19 @@ export function hwHostView(r: Room) {
   const players = ps
     .map((p) => ({
       id: p.id, name: p.name, avatar: p.avatar, score: p.score, online: p.online,
+      pos: p.pos, idleMs: p.lastAt ? Date.now() - p.lastAt : null, // relativo, como leftMs: los relojes no coinciden
       answered: p.results.length, finished: p.results.length >= total,
       accuracy: p.results.length ? p.results.reduce((a, x) => a + x.credit, 0) / p.results.length : 0,
     }))
     .sort((a, b) => b.score - a.score)
   const qstats = r.lesson.questions.map((x, i) => {
     const rs = ps.flatMap((p) => (p.results[i] ? [p.results[i].credit] : []))
-    return { prompt: x.prompt, answered: rs.length, accuracy: rs.length ? rs.reduce((a, c) => a + c, 0) / rs.length : null }
+    // las equivocaciones más repetidas ("flexbox" mal escrito 5 veces, la opción B 7 veces…)
+    const wrong = new Map<string, number>()
+    for (const p of ps) { const k = p.results[i]?.pick; if (k) wrong.set(k, (wrong.get(k) ?? 0) + 1) }
+    return { prompt: x.prompt, answered: rs.length, accuracy: rs.length ? rs.reduce((a, c) => a + c, 0) / rs.length : null, wrong: topWrong(wrong) }
   })
-  return { mode: 'homework' as const, pin: r.pin, title: r.lesson.title, total, closed: r.closed, players, qstats }
+  return { mode: 'homework' as const, pin: r.pin, title: r.lesson.title, total, closed: r.closed, players, qstats, reportId: r.reportId }
 }
 
 export function emitHw(r: Room, p?: Player) {
@@ -234,8 +239,9 @@ export function hwAnswer(r: Room, p: Player, value: unknown) {
   p.streak = ok === 1 ? p.streak + 1 : 0
   const gained = ok > 0 ? Math.round(score(cur.points, 1, Math.max(0, p.streak - 1)) * ok) : 0 // sin reloj: velocidad máxima
   p.score += gained
-  p.results[p.pos] = { credit: ok, gained }
+  p.results[p.pos] = { credit: ok, gained, pick: ok < 1 ? answerLabel(cur, value) : undefined }
   p.awaiting = true
+  p.lastAt = Date.now()
   persist(r)
   emitHw(r, p)
 }
@@ -244,6 +250,7 @@ export function hwNext(r: Room, p: Player) {
   if (r.mode !== 'homework' || !p.awaiting) return
   p.awaiting = false
   p.pos++
+  p.lastAt = Date.now()
   persist(r)
   emitHw(r, p)
 }
@@ -259,10 +266,36 @@ export function hwLock(r: Room) {
 /** Lo privado de cada jugador en vivo: su poder, el que activó y si ya respondió esta pregunta (índice, o -1). */
 export const meOf = (r: Room, p: Player) => ({ power: p.power, armed: p.armed, answered: r.answers.has(p.id) ? r.index : -1 })
 
+const topWrong = (m: Map<string, number>) => [...m].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([label, n]) => ({ label, n }))
+
+/**
+ * Lo que SOLO ve el profe en vivo (canal `pin:host`): quién respondió, cómo le va a cada uno mientras la pregunta sigue abierta
+ * y la pregunta CON su solución (a los estudiantes `state` se la oculta). Los estudiantes nunca reciben esto.
+ */
+export function dashOf(r: Room) {
+  const cur = q(r)
+  const wrong = new Map<string, number>()
+  const credit: Record<string, number> = {}
+  for (const [id, a] of r.answers) {
+    credit[id] = a.credit
+    const label = cur && a.credit < 1 ? answerLabel(cur, a.value) : undefined
+    if (label) wrong.set(label, (wrong.get(label) ?? 0) + 1)
+  }
+  return {
+    answered: [...r.answers.keys()],
+    credit,
+    key: r.phase === 'question' || r.phase === 'reveal' ? cur : undefined,
+    dist: cur ? distOf(cur, r.answers) : undefined, // cuántos eligieron cada opción, EN VIVO (a los estudiantes solo les llega al revelar)
+    wrong: topWrong(wrong),
+    reportId: r.reportId,
+  }
+}
+
 export function broadcast(r: Room) {
   r.touched = Date.now()
   if (r.mode === 'homework') return void io.to(`${r.pin}:host`).emit('state', hwHostView(r))
   io.to(r.pin).emit('state', view(r))
+  if (io.sockets.adapter.rooms.get(`${r.pin}:host`)?.size) io.to(`${r.pin}:host`).emit('dash', dashOf(r))
   for (const p of r.players.values()) io.to(`${r.pin}:p:${p.id}`).emit('me', meOf(r, p)) // 'me' llega después de 'state' (mismo socket, en orden)
 }
 
@@ -309,7 +342,7 @@ function reveal(r: Room) {
   for (const p of r.players.values()) {
     if (p.out !== undefined) continue // eliminado en papa caliente: solo observa (en el reporte queda "no participó")
     const a = r.answers.get(p.id)
-    const ok = a ? grade(cur, a.value) : 0
+    const ok = a ? a.credit : 0 // ya calificada al llegar
     r.credit.set(p.id, ok)
     p.streak = ok === 1 ? p.streak + 1 : p.armed === 'shield' ? p.streak : 0 // la racha solo sube con respuestas perfectas; el escudo la protege
     const left = a ? (r.endsAt - a.at) / (cur.time * 1000) : 0
@@ -426,7 +459,7 @@ export function next(r: Room) {
 
 export function answer(r: Room, playerId: string, value: unknown) {
   if (r.mode !== 'live' || r.phase !== 'question' || !r.players.has(playerId) || r.answers.has(playerId) || r.players.get(playerId)!.out !== undefined) return
-  r.answers.set(playerId, { value, at: Math.min(Date.now(), r.endsAt) })
+  r.answers.set(playerId, { value, at: Math.min(Date.now(), r.endsAt), credit: grade(q(r)!, value) })
   if (allIn(r)) return reveal(r)
   broadcast(r)
 }

@@ -39,6 +39,13 @@ export default function Report() {
   const go = useNavigate()
   const [r, setR] = useState<ReportData | null>(null)
   useEffect(() => void api<ReportData>(`/reports/${id}`).then(setR, () => go('/admin/reports')), [id])
+  // mientras la partida o tarea siga en curso, la tabla se actualiza sola cada 5 s (si falla un refresco se queda con lo último)
+  const open = !!r && !r.closed
+  useEffect(() => {
+    if (!open) return
+    const t = setInterval(() => void api<ReportData>(`/reports/${id}`).then(setR, () => {}), 5000)
+    return () => clearInterval(t)
+  }, [open, id])
   if (!r) return <Screen>Cargando…</Screen>
 
   const colAcc = r.questions.map((_, i) => mean(answered(r.players.map((p) => p.results[i]))))
@@ -65,7 +72,7 @@ export default function Report() {
         <h1 className="text-3xl">{r.title}</h1>
         <p className="opacity-60">
           {when(r.at)} · {r.mode === 'homework' ? 'Tarea' : 'Partida en vivo'}
-          {!r.closed && ' · en curso (vuelve a abrir esta página para ver lo nuevo)'}
+          {!r.closed && ' · en curso (se actualiza sola)'}
         </p>
       </div>
 

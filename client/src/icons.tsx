@@ -143,3 +143,7 @@ export function LessonIcon({ name, className }: { name: string; className?: stri
   const C = LESSON_ICONS[name] ?? LESSON_ICONS.target // lecciones antiguas guardaban un emoji: caen en el icono por defecto
   return <C className={className} />
 }
+// Panel del profe
+export const Offline = wrap(L.WifiOff)
+export const Clock = wrap(L.Clock)
+export const Hourglass = wrap(L.Hourglass)

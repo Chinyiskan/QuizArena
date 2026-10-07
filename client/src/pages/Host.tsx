@@ -1,48 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
-import type { Question } from '../../../shared/questions.ts'
-import { api, joinUrl, socket, useCountdown, useRoom, type LiveView, type RoomView } from '../lib.ts'
+import { api, joinUrl, socket, useCountdown, useDash, useRoom, type LiveView, type RoomView } from '../lib.ts'
 import { play, music, stopFuse } from '../sound.ts'
 import { copyText } from '../browser.ts'
-import { Avatar, Board, Confetti, Explanation, CodeBlock, Logo, NextIn, Passage, Ring, Screen, MusicButton, SoundButton } from '../ui.tsx'
-import { registry } from '../types/registry.tsx'
-import { SHAPES, optStyle } from '../types/choice.tsx'
+import { Avatar, Board, Confetti, Logo, NextIn, Screen, MusicButton, SoundButton } from '../ui.tsx'
 import HwPanel from './HwPanel.tsx'
-import { Bolt, Bomb, Check, Hand, Medal, Next, Pause, PowerX2, Sparkles, Target, Trophy, Wave, X } from '../icons.tsx'
+import Control from './Control.tsx'
+import { Bolt, Bomb, Hand, Medal, Next, Pause, PowerX2, Reports, Sparkles, Target, Trophy, Wave, X } from '../icons.tsx'
 import { BombBadge, BombReport } from '../bomb.tsx'
 import { STYLES, type Style } from '../../../shared/powers.ts'
-
-/** Cómo respondió el grupo (solo tipos de opciones). */
-function Dist({ q, dist }: { q: Question; dist: number[] }) {
-  if (q.type !== 'mcq' && q.type !== 'multi' && q.type !== 'tf') return null
-  const rows =
-    q.type === 'tf'
-      ? [{ label: 'Verdadero', shape: <Check />, color: 1, right: q.data.correct }, { label: 'Falso', shape: <X />, color: 0, right: !q.data.correct }]
-      : q.data.options.map((label, i) => ({ label, shape: SHAPES[i], color: i, right: q.type === 'mcq' ? q.data.correct === i : q.data.correct.includes(i) }))
-  const max = Math.max(1, ...dist)
-  return (
-    <section className="card-dark space-y-2 p-4" aria-label="Cómo respondió el grupo">
-      <h3 className="text-sm uppercase tracking-wide opacity-60">Cómo respondió el grupo</h3>
-      {rows.map((r, i) => (
-        <div key={i} className="flex items-center gap-3" style={optStyle(r.color)}>
-          <span className="w-6 text-center">{r.shape}</span>
-          <span className={`w-32 truncate sm:w-48 ${r.right ? 'font-extrabold' : 'opacity-70'}`}>{r.right && <Check className="mr-1 inline" />}{r.label}</span>
-          <div className="h-7 flex-1 rounded-lg bg-white/10">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${(dist[i] / max) * 100}%` }}
-              transition={{ type: 'spring', stiffness: 120, damping: 20, delay: 0.15 + i * 0.07 }}
-              className={`h-full rounded-lg border-[3px] border-edge ${dist[i] ? '' : 'invisible'}`}
-              style={{ background: 'var(--c)', opacity: r.right ? 1 : 0.55 }}
-            />
-          </div>
-          <span className="w-8 text-right font-display text-xl tabular-nums">{dist[i]}</span>
-        </div>
-      ))}
-    </section>
-  )
-}
 
 const PAUSES = [5, 8, 12, 20]
 
@@ -155,6 +122,7 @@ function LiveHost({ s, pin }: { s: LiveView & { deadline: number; autoDeadline: 
   const [base, setBase] = useState('')
   const [copied, setCopied] = useState(false)
   const left = useCountdown(s.deadline, s.phase === 'question')
+  const d = useDash()
   useEffect(() => void api('/config').then((c) => setBase(c.publicUrl)), [])
 
   // sonidos de fase (el podio maneja los suyos) y cuenta regresiva de los últimos 5 s
@@ -177,11 +145,20 @@ function LiveHost({ s, pin }: { s: LiveView & { deadline: number; autoDeadline: 
     socket.emit('host:close', pin)
     go('/admin')
   }
-  const q = s.question
-  const R = q && registry[q.type]
+  // barra espaciadora = siguiente / cerrar (con el cursor lejos del botón); no cuenta si se está escribiendo o sobre un botón
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (e.code !== 'Space' || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName) || (s.phase !== 'question' && s.phase !== 'reveal')) return
+      e.preventDefault()
+      next()
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [s.phase])
 
   return (
-    <Screen className="projector !max-w-[min(96vw,1700px)] flex flex-col gap-5">
+    <Screen className="!max-w-[min(96vw,1280px)] flex flex-col gap-5">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <Logo to="/admin" size="text-2xl" />
         <span className="sticker !text-sm">{s.title}</span>
@@ -229,55 +206,46 @@ function LiveHost({ s, pin }: { s: LiveView & { deadline: number; autoDeadline: 
         </>
       )}
 
-      {s.phase === 'question' && q && R && (
-        <>
-          <div className="flex items-center gap-4">
-            <Ring left={left} total={q.time} />
-            <span className="sticker">Pregunta {s.index + 1}/{s.total}</span>
-            {s.style === 'bomb' && <BombBadge bombs={s.bombs} alive={s.alive} hot={left <= 5} big />}
-            <span className="ml-auto inline-flex items-center gap-2 font-display text-xl"><Hand /> {s.answered}/{s.players.filter((p) => p.online && p.out === undefined).length}</span>
-          </div>
-          <h1 className="text-center text-3xl leading-tight sm:text-5xl">{q.prompt}</h1>
-          <Passage text={q.passage} />
-          <CodeBlock code={q.code} />
-          {/* opciones visibles para proyectar; en esta fase `correct` va oculto */}
-          <div className="pointer-events-none"><R.Player key={q.id} q={q} onSubmit={() => {}} disabled /></div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button className="btn btn-sun" onClick={next}>Cerrar ahora</button>
-            <AutoControl s={s} pin={pin} />
-          </div>
-        </>
-      )}
-
-      {s.phase === 'reveal' && q && R && (
-        <>
-          <h2 className="text-center text-2xl sm:text-3xl">{q.prompt}</h2>
-          <R.Correct q={q} />
-          <Explanation text={q.explanation} />
-          {s.style === 'bomb' && <BombReport players={s.players} booms={s.booms} defused={s.defused} alive={s.alive} />}
-          {s.dist && <Dist q={q} dist={s.dist} />}
-          <div className="mx-auto w-full max-w-xl"><Board players={s.players} gained={s.gained} onKick={kick} /></div>
-          {Object.entries(s.steals).map(([thief, st]) => (
-            <p key={thief} className="pop mx-auto text-center font-display text-xl text-pink">
-              {st.blocked ? `${s.players.find((p) => p.id === st.from)?.name} bloqueó con su escudo el robo de ${s.players.find((p) => p.id === thief)?.name}` : `${s.players.find((p) => p.id === thief)?.name} le robó ${st.amount} puntos a ${s.players.find((p) => p.id === st.from)?.name}`}
-            </p>
-          ))}
-          {Object.keys(s.drops).length > 0 && <p className="pop mx-auto flex items-center gap-2 text-center font-display text-xl"><PowerX2 /> {Object.keys(s.drops).length} {Object.keys(s.drops).length === 1 ? 'jugador consiguió un poder' : 'jugadores consiguieron poderes'}</p>}
-          <div className="mx-auto w-full max-w-xl space-y-3">
-            {s.auto && <NextIn key={s.index} deadline={s.autoDeadline} />}
-            <div className="flex flex-wrap justify-center gap-3">
-              {s.auto && <button className="btn btn-ghost" onClick={() => socket.emit('host:auto', pin, false)}><Pause /> Pausar automático</button>}
-              <button className="btn btn-pink btn-big" onClick={next}>{s.index + 1 >= s.total || (s.style === 'bomb' && s.alive <= 1 && s.players.length > 1) ? <>Ver podio <Trophy /></> : <>Siguiente <Next /></>}</button>
-            </div>
-            {!s.auto && <AutoControl s={s} pin={pin} />}
-          </div>
-        </>
+      {(s.phase === 'question' || s.phase === 'reveal') && (
+        <Control
+          s={s} d={d} left={left} onKick={kick}
+          controls={
+            s.phase === 'question' ? (
+              <>
+                <button className="btn btn-sun" onClick={next} title="Atajo: barra espaciadora">Cerrar ahora</button>
+                <AutoControl s={s} pin={pin} />
+              </>
+            ) : (
+              <>
+                {s.auto && <div className="w-48"><NextIn key={s.index} deadline={s.autoDeadline} /></div>}
+                {s.auto && <button className="btn btn-ghost" onClick={() => socket.emit('host:auto', pin, false)}><Pause /> Pausar</button>}
+                <button className="btn btn-pink" onClick={next} title="Atajo: barra espaciadora">{s.index + 1 >= s.total || (s.style === 'bomb' && s.alive <= 1 && s.players.length > 1) ? <>Ver podio <Trophy /></> : <>Siguiente <Next /></>}</button>
+                {!s.auto && <AutoControl s={s} pin={pin} />}
+              </>
+            )
+          }
+          extra={
+            <>
+              {s.style === 'bomb' && s.phase === 'question' && <BombBadge bombs={s.bombs} alive={s.alive} hot={left <= 5} />}
+              {s.style === 'bomb' && s.phase === 'reveal' && <BombReport players={s.players} booms={s.booms} defused={s.defused} alive={s.alive} />}
+              {s.phase === 'reveal' && Object.entries(s.steals).map(([thief, st]) => (
+                <p key={thief} className="text-center font-display text-lg text-pink">
+                  {st.blocked ? `${s.players.find((p) => p.id === st.from)?.name} bloqueó con su escudo el robo de ${s.players.find((p) => p.id === thief)?.name}` : `${s.players.find((p) => p.id === thief)?.name} le robó ${st.amount} puntos a ${s.players.find((p) => p.id === st.from)?.name}`}
+                </p>
+              ))}
+              {s.phase === 'reveal' && Object.keys(s.drops).length > 0 && <p className="flex items-center justify-center gap-2 text-center font-display text-lg"><PowerX2 /> {Object.keys(s.drops).length} {Object.keys(s.drops).length === 1 ? 'jugador consiguió un poder' : 'jugadores consiguieron poderes'}</p>}
+            </>
+          }
+        />
       )}
 
       {s.phase === 'podium' && (
         <>
           <Podium players={s.players} bomb={s.style === 'bomb'} />
-          <div className="text-center"><button className="btn btn-big" onClick={end}>Terminar</button></div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {d?.reportId && <Link to={`/admin/reports/${d.reportId}`} className="btn btn-cyan btn-big"><Reports /> Ver reporte</Link>}
+            <button className="btn btn-big" onClick={end}>Terminar</button>
+          </div>
         </>
       )}
     </Screen>

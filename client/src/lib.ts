@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
-import type { hwHostView, hwPlayerView, meOf, reportOf, view } from '../../server/game.ts'
+import type { dashOf, hwHostView, hwPlayerView, meOf, reportOf, view } from '../../server/game.ts'
 
 export type ReportData = ReturnType<typeof reportOf>
 export type ReportMeta = { id: string; at: number; title: string; mode: 'live' | 'homework'; players: number; accuracy: number; closed: boolean }
 export type LiveView = ReturnType<typeof view>
 export type HwHostView = ReturnType<typeof hwHostView>
 export type HwPlayerView = ReturnType<typeof hwPlayerView>
+/** Extras que solo recibe el profe en vivo (evento 'dash'). */
+export type DashView = ReturnType<typeof dashOf>
 /** Lo privado del jugador en vivo (evento 'me', solo por su canal). */
 export type MeView = ReturnType<typeof meOf>
 /** Lo que recibe 'state': el profe puede estar en una partida en vivo o en una tarea. */
@@ -31,10 +33,10 @@ socket.on('disconnect', (reason) => void (reason === 'io server disconnect' && s
 export function useRoom<T extends RoomView = LiveView>(onConnect: () => void) {
   const cb = useRef(onConnect)
   cb.current = onConnect
-  const [state, setState] = useState<(T & { deadline: number; autoDeadline: number }) | null>(null)
+  const [state, setState] = useState<(T & { deadline: number; autoDeadline: number; at: number }) | null>(null)
   const [closed, setClosed] = useState(false)
   useEffect(() => {
-    const onState = (s: T) => setState({ ...s, deadline: performance.now() + ('leftMs' in s ? s.leftMs : 0), autoDeadline: performance.now() + ('autoLeftMs' in s ? s.autoLeftMs : 0) })
+    const onState = (s: T) => setState({ ...s, at: performance.now(), deadline: performance.now() + ('leftMs' in s ? s.leftMs : 0), autoDeadline: performance.now() + ('autoLeftMs' in s ? s.autoLeftMs : 0) })
     const onClosed = () => setClosed(true)
     const onConn = () => cb.current()
     socket.on('state', onState).on('closed', onClosed).on('connect', onConn)
@@ -42,6 +44,16 @@ export function useRoom<T extends RoomView = LiveView>(onConnect: () => void) {
     return () => void socket.off('state', onState).off('closed', onClosed).off('connect', onConn)
   }, [])
   return { state, closed }
+}
+
+/** Extras del profe en vivo: quién respondió, bien/mal en vivo y la pregunta con su solución. Llega justo después de 'state'. */
+export function useDash() {
+  const [d, setD] = useState<DashView | null>(null)
+  useEffect(() => {
+    socket.on('dash', setD)
+    return () => void socket.off('dash', setD)
+  }, [])
+  return d
 }
 
 /** Vista personal del modo tarea: llega por el evento 'hw'. Al montar pide sincronizarse (el 'hw' del join llegó antes). */
