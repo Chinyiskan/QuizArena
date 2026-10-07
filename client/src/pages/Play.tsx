@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { api, socket, useCountdown, useRoom, type MeView } from '../lib.ts'
-import { buzz, music, play } from '../sound.ts'
+import { buzz, music, play, stopFuse } from '../sound.ts'
 import { DropCard, PowerTray } from '../power.tsx'
 import { BoomCard, BombBadge, DefusedCard, Explosion, SpectatorCard } from '../bomb.tsx'
 import { POWERS, STYLES } from '../../../shared/powers.ts'
-import { Avatar, Board, Confetti, Explanation, CodeBlock, Logo, NextIn, Passage, Ring, Screen, SoundButton } from '../ui.tsx'
+import { Avatar, Board, Confetti, Explanation, CodeBlock, Logo, NextIn, Passage, Ring, Screen, MusicButton, SoundButton } from '../ui.tsx'
 import { PIXEL_NAMES } from '../pixel.tsx'
 import { registry } from '../types/registry.tsx'
 import HwPlay from './HwPlay.tsx'
@@ -107,17 +107,27 @@ export default function Play() {
   const boomed = !!(s && me?.id && s.booms.includes(me.id))
   const defused = !!(s && me?.id && s.defused.includes(me.id))
   const wasOut = (s?.players.find((p) => p.id === me?.id)?.out ?? Infinity) < (s?.index ?? 0) // ya estaba fuera antes de esta pregunta
+
+  // tic-tac en MI dispositivo (el profe no comparte pantalla): a 4 s del final, o la mecha a 5 s en papa caliente. Se corta al responder o al cerrarse la pregunta.
+  const sec = Math.ceil(left)
+  const sentNow = !!s && (sentIdx === s.index || priv.answered === s.index)
+  const isOut = s?.players.find((p) => p.id === me?.id)?.out !== undefined
+  useEffect(() => {
+    if (s?.phase !== 'question' || sentNow || isOut || !me?.id) return
+    if (s.style === 'bomb' ? s.bombs > 0 && sec === 5 : sec === 4) play(s.style === 'bomb' ? 'fuse' : 'countdown')
+  }, [sec])
+  useEffect(() => { if (s?.phase !== 'question' || sentNow) stopFuse() }, [s?.phase, sentNow])
   useEffect(() => {
     if (s?.phase === 'reveal' && !wasOut) {
       if (boomed) (play('boom'), buzz([400, 80, 200]))
       else {
         play(myCredit === 1 ? 'right' : myCredit > 0 ? 'partial' : 'wrong')
         buzz(myCredit > 0 ? 80 : [60, 40, 60])
-        if (myCredit === 1 && (s.players.find((p) => p.id === me?.id)?.streak ?? 0) >= 3) setTimeout(() => play('streak'), 600) // racha de 3+
       }
-      if (defused) setTimeout(() => play('defuse'), 450)
-      if (Object.values(s.steals).some((st) => st.from === me?.id && !st.blocked)) setTimeout(() => (play('victim'), buzz([80, 40, 80])), 500) // me robaron
-      if (myDrop) setTimeout(() => (play('get'), buzz([30, 30, 60])), 500)
+      if (defused) play('defuse')
+      if (Object.values(s.steals).some((st) => st.from === me?.id && !st.blocked)) (play('victim'), buzz([80, 40, 80])) // me robaron
+      if (myDrop) (play('get'), buzz([30, 30, 60]))
+      if (myCredit === 1 && !boomed && (s.players.find((p) => p.id === me?.id)?.streak ?? 0) >= 3) play('streak') // racha de 3+: al final de la cola
     }
     if (s?.phase === 'podium') {
       play(myRank === 0 ? 'fanfare' : 'reveal')
@@ -170,6 +180,7 @@ export default function Play() {
         <Avatar value={me.avatar} size={44} />
         <b className="min-w-0 flex-1 truncate">{me.name}</b>
         <span className="sticker !text-sm"><Star className="inline" /> {mine?.score ?? 0}</span>
+        <MusicButton />
         <SoundButton />
       </header>
 

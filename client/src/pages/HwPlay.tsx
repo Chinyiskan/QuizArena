@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { motion } from 'motion/react'
 import { socket, useHw } from '../lib.ts'
 import { buzz, music, play } from '../sound.ts'
-import { Avatar, Confetti, Explanation, CodeBlock, Passage, Screen, SoundButton } from '../ui.tsx'
+import { Avatar, Confetti, Explanation, CodeBlock, Passage, Screen, MusicButton, SoundButton } from '../ui.tsx'
 import { registry } from '../types/registry.tsx'
 import { Book, Flag, Flame, Homework, Like, Lock, Mark, Next, Star, StatusIcon, Trophy } from '../icons.tsx'
 
@@ -32,6 +32,7 @@ export default function HwPlay({ name, avatar }: { name: string; avatar: string 
         <Avatar value={avatar} size={44} />
         <b className="min-w-0 flex-1 truncate">{name}</b>
         <span className="sticker !text-sm"><Star className="inline" /> {v.score}</span>
+        <MusicButton />
         <SoundButton />
       </header>
 

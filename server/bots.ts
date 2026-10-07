@@ -28,7 +28,7 @@ function answerFor(q: any) {
 }
 
 for (let i = 0; i < +n; i++) {
-  const s = io('http://localhost:3000')
+  const s = io(process.env.BASE ?? 'http://localhost:3000')
   let last = -1
   s.on('connect', () => s.emit('player:join', pin, `${NAMES[i % 10]}${i >= 10 ? i : ''}`, `pix:${AVATARS[i % 10]}`, undefined, () => {}))
   // modo tarea: responde, mira la retroalimentación y pasa a la siguiente, cada bot a su ritmo
