@@ -13,7 +13,8 @@
     "test:live": "tsx --env-file-if-exists=.env server/smoke.test.ts && tsx --env-file-if-exists=.env server/smoke-hw.test.ts && tsx --env-file-if-exists=.env server/smoke-auto.test.ts && tsx --env-file-if-exists=.env server/smoke-power.test.ts && tsx --env-file-if-exists=.env server/smoke-bomb.test.ts && tsx --env-file-if-exists=.env server/smoke-security.test.ts",
     "seed": "tsx server/seed.ts",
     "bots": "tsx server/bots.ts",
-    "totp": "tsx server/totp.ts"
+    "totp": "tsx server/totp.ts",
+    "musica": "node scripts/musica.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

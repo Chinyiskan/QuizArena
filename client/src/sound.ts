@@ -251,7 +251,7 @@ export function music(track: Track | null) {
   if (current?.track === track) return
   if (current) { const old = current.el; fade(old, 0, 700, () => old.pause()); current = undefined }
   if (!track || !isMusicOn()) return
-  const el = new Audio(`/sfx/music-${track}.mp3`)
+  const el = new Audio(`/sfx/music-${track}.m4a`)
   el.loop = track !== 'podium'
   el.volume = 0
   current = { track, el }
