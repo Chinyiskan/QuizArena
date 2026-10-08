@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { grade, score, hideAnswer, lessonProblems, parseBlanks, tapTokens, type Question } from './questions.ts'
+import { grade, score, hideAnswer, lessonProblems, lessonInputSchema, parseBlanks, tapTokens, type Question } from './questions.ts'
 
 const base = { id: 'x', prompt: 'p', time: 20, points: 1000 }
 const mcq: Question = { ...base, type: 'mcq', data: { options: ['a', 'b'], correct: 1 } }
@@ -135,5 +135,27 @@ assert.deepEqual(lessonProblems({ title: 't', questions: [{ ...open, passage: 'U
 assert.equal(lessonProblems({ title: 't', questions: [{ ...order, data: { items: ['a', 'A', 'b'] } }] }).length, 1, 'repetidos en reordenar')
 assert.equal(lessonProblems({ title: 't', questions: [{ ...sort, data: { cats: [{ name: 'x', items: ['a'] }, { name: 'y', items: ['a'] }] } }] }).length, 1, 'elemento en dos categorías')
 assert.equal(lessonProblems({ title: 't', questions: [{ ...match, data: { pairs: [{ left: 'a', right: '' }, { left: 'b', right: 'c' }] } }] }).length, 1)
+
+// bloques de código: texto + sangría por posición; poner de más también resta; las líneas repetidas no confunden
+const L1 = [{ t: 'for i in x:', i: 0 }, { t: 'if i:', i: 1 }, { t: 'print(i)', i: 2 }, { t: 'print(i)', i: 1 }]
+const blocks: Question = { ...base, type: 'blocks', data: { lang: 'py', lines: L1, extra: ['while True:'], indent: true } }
+assert.equal(grade(blocks, L1), 1)
+assert.equal(grade(blocks, [L1[0], L1[1], L1[2], { t: 'print(i)', i: 2 }]), 3 / 4, 'sangría mal en una línea')
+assert.equal(grade(blocks, [L1[1], L1[0], L1[2], L1[3]]), 2 / 4, 'dos líneas cambiadas')
+assert.equal(grade(blocks, [...L1, { t: 'while True:', i: 0 }]), 4 / 5, 'bloque de sobra incluido')
+assert.equal(grade({ ...blocks, data: { ...blocks.data, indent: false } } as Question, L1.map((l) => ({ ...l, i: 0 }))), 1, 'sin calificar sangría')
+assert.equal(grade(blocks, 'x'), 0)
+const hb = hideAnswer(blocks).data as { lines: unknown[]; bank: string[]; extra: string[] }
+assert.deepEqual([...hb.bank].sort(), ['for i in x:', 'if i:', 'print(i)', 'print(i)', 'while True:'], 'banco = bloques + distractores')
+assert.equal(hb.lines.length + hb.extra.length, 0, 'no viaja la solución')
+assert.deepEqual(lessonProblems({ title: 't', questions: [blocks] }), [])
+assert.equal(lessonProblems({ title: 't', questions: [{ ...blocks, data: { ...blocks.data, extra: ['IF i:'] } } as Question] }).length, 1, 'distractor igual a un bloque')
+assert.equal(lessonProblems({ title: 't', questions: [{ ...blocks, data: { ...blocks.data, lines: [L1[0]] } } as Question] }).length, 1, 'mínimo 2 líneas')
+
+// carpeta y portada: por defecto vacías; la portada solo acepta nombres de archivo generados (nada de rutas)
+const L = { title: 't', questions: [mcq] }
+assert.equal(lessonInputSchema.parse(L).folder, '')
+assert.equal(lessonInputSchema.parse({ ...L, cover: '0123456789abcdef.webp' }).cover, '0123456789abcdef.webp')
+for (const cover of ['../x.webp', 'a.svg', '0123456789abcdef.webp/../x']) assert.equal(lessonInputSchema.safeParse({ ...L, cover }).success, false, cover)
 
 console.log('ok')

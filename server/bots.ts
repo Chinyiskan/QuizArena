@@ -15,6 +15,7 @@ function answerFor(q: any) {
     : q.type === 'multi' ? q.data.options.flatMap((_: string, j: number) => (Math.random() < 0.4 ? [j] : []))
     : q.type === 'tf' ? Math.random() < 0.5
     : q.type === 'order' ? q.data.items
+    : q.type === 'blocks' ? q.data.bank.map((t: string) => ({ t, i: 0 }))
     : q.type === 'table' ? blanksOf(q.data.rows.flat().join(' ')).map(() => 'x')
     : q.type === 'grid' ? q.data.rows.map(() => Math.floor(Math.random() * q.data.cols.length))
     : q.type === 'tap' ? tapTokens(q.data.text).toks.flatMap((_, i) => (Math.random() < 0.15 ? [i] : []))

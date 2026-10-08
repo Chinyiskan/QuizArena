@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict'
+import { BASE, H, cookie, bare } from './test-auth.ts'
+const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.from([4, 0, 0, 0]), Buffer.from('WEBPVP8 ....')])
+const up = (b: Buffer, type = 'image/webp', c = true) => fetch(BASE + '/api/covers', { method: 'POST', headers: { 'content-type': type, ...(c ? { cookie } : {}) }, body: new Uint8Array(b) })
+assert.equal((await up(webp, 'image/webp', false)).status, 401, 'sin sesión')
+assert.equal((await up(Buffer.from('<svg/>'))).status, 400, 'no webp')
+assert.equal((await up(webp, 'image/svg+xml')).status, 415, 'otro tipo')
+const r = await up(webp); assert.equal(r.status, 200)
+const { name } = await r.json()
+assert.equal((await fetch(`${BASE}/covers/${name}`)).status, 200, 'se sirve')
+const l = await (await fetch(BASE + '/api/lessons', { method: 'POST', headers: H, body: JSON.stringify({ title: 'cov', emoji: 'flask', folder: 'Inglés', cover: name, questions: [{ id: 'a', type: 'tf', prompt: 'p', time: 10, points: 100, data: { correct: true } }] }) })).json()
+assert.equal(l.folder, 'Inglés')
+const room = await (await fetch(BASE + '/api/rooms', { method: 'POST', headers: H, body: JSON.stringify({ lessonId: l.id }) })).json()
+assert.equal((await (await fetch(`${BASE}/api/rooms/${room.pin}`)).json()).cover, name, 'el PIN público trae portada')
+await fetch(`${BASE}/api/rooms/${room.pin}`, { method: 'DELETE', headers: bare }); await fetch(`${BASE}/api/lessons/${l.id}`, { method: 'DELETE', headers: bare })
+console.log('ok covers')

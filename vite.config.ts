@@ -10,6 +10,6 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: true, // el túnel de Cloudflare entra con otro hostname
-    proxy: { '/api': 'http://localhost:3000', '/socket.io': { target: 'http://localhost:3000', ws: true } },
+    proxy: { '/covers': 'http://localhost:3000', '/api': 'http://localhost:3000', '/socket.io': { target: 'http://localhost:3000', ws: true } },
   },
 })

@@ -12,7 +12,7 @@ initGame({
 
 const mcq = { id: 'a', type: 'mcq' as const, prompt: 'Color del cielo', time: 20, points: 1000, data: { options: ['Rojo', 'Azul', 'Verde'], correct: 1 } }
 const open = { id: 'b', type: 'open' as const, prompt: 'Layout moderno', time: 20, points: 1000, data: { answers: ['flexbox'] } }
-const lesson = { id: 'l', updatedAt: 0, title: 'panel', emoji: 'flask', questions: [mcq, open] }
+const lesson = { id: 'l', updatedAt: 0, title: 'panel', emoji: 'flask', folder: '', cover: '', questions: [mcq, open] }
 type P = Exclude<ReturnType<typeof addPlayer>, 'locked'>
 
 // ---------- answerLabel: texto legible de lo que respondió ----------

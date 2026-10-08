@@ -12,6 +12,7 @@ import { DragEditor, DragPlayer } from './drag.tsx'
 import { TableCorrect, TableEditor, TablePlayer } from './table.tsx'
 import { GridCorrect, GridEditor, GridPlayer } from './grid.tsx'
 import { TapCorrect, TapEditor, TapPlayer } from './tap.tsx'
+import { BlocksCorrect, BlocksEditor, BlocksPlayer } from './blocks.tsx'
 import { BlanksCorrect as DragCorrect } from './blanks.tsx'
 
 // Registro de UI por tipo. Para un tipo nuevo: sumarlo en shared/questions.ts y aquí.
@@ -36,6 +37,7 @@ export const registry: Record<TypeId, Entry> = {
   table: { blank: () => ({ header: true, rows: [['', ''], ['', '']] }), Editor: TableEditor, Player: TablePlayer, Correct: TableCorrect },
   grid: { blank: () => ({ cols: ['Verdadero', 'Falso'], rows: [{ text: '', correct: -1 }, { text: '', correct: -1 }] }), Editor: GridEditor, Player: GridPlayer, Correct: GridCorrect },
   tap: { blank: () => ({ text: '' }), Editor: TapEditor, Player: TapPlayer, Correct: TapCorrect },
+  blocks: { blank: () => ({ lang: 'py', lines: [], extra: [], indent: true }), Editor: BlocksEditor, Player: BlocksPlayer, Correct: BlocksCorrect },
   open: { blank: () => ({ answers: [''] }), Editor: OpenEditor, Player: OpenPlayer, Correct: OpenCorrect },
 }
 

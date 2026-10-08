@@ -26,6 +26,11 @@ export const Hand = wrap(L.Hand)
 export const Bolt = wrap(L.Zap)
 export const Save = wrap(L.Save)
 export const Plus = wrap(L.Plus)
+export const IndentLess = wrap(L.IndentDecrease)
+export const IndentMore = wrap(L.IndentIncrease)
+export const Folder = wrap(L.Folder)
+export const ImagePlus = wrap(L.ImagePlus)
+export const Chevron = wrap(L.ChevronDown)
 export const Homework = wrap(L.ClipboardList)
 export const Up = wrap(L.ArrowUp)
 export const Down = wrap(L.ArrowDown)
@@ -127,6 +132,7 @@ export const TYPE_ICONS: Record<string, ComponentType<P>> = {
   table: wrap(L.Table),
   grid: wrap(L.Grid3x3),
   tap: wrap(L.MousePointerClick),
+  blocks: wrap(L.Blocks),
 }
 
 // Iconos que el profe puede elegir para una lección (se guarda la clave en el campo `emoji` de la lección).

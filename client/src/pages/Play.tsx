@@ -68,7 +68,7 @@ function JoinForm({ pin, onJoin, error }: { pin: string; onJoin: (m: Me) => void
 
 export default function Play() {
   const { pin = '' } = useParams()
-  const [room, setRoom] = useState<{ title: string; open: boolean; mode: 'live' | 'homework' } | 'bad' | 'busy' | null>(null)
+  const [room, setRoom] = useState<{ title: string; cover?: string; open: boolean; mode: 'live' | 'homework' } | 'bad' | 'busy' | null>(null)
   const [me, setMe] = useState<Me | null>(() => load(pin))
   const [error, setError] = useState('')
   const [sentIdx, setSentIdx] = useState(-1)
@@ -157,7 +157,7 @@ export default function Play() {
   if (!me?.id)
     return (
       <Screen className="flex flex-col justify-center gap-6">
-        <div className="text-center"><Logo size="text-4xl" /><p className="mt-3 opacity-70">{room.title}</p></div>
+        <div className="text-center"><Logo size="text-4xl" />{room.cover && <img src={`/covers/${room.cover}`} alt="" className="mx-auto mt-4 aspect-video w-full max-w-xs -rotate-1 rounded-2xl border-[3px] border-edge object-cover shadow-[0_5px_0_var(--color-edge)]" />}<p className="mt-3 opacity-70">{room.title}</p></div>
         <JoinForm pin={pin} onJoin={join} error={error} />
       </Screen>
     )

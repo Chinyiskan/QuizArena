@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CODE_LANGS, lessonProblems, typeIds, types, type CodeLang, type LessonInput, type Question, type TypeId } from '../../../shared/questions.ts'
-import { api } from '../lib.ts'
+import { api, uploadCover } from '../lib.ts'
 import { uid } from '../browser.ts'
-import { Back, Book, CodeIcon, Copy, Down, LESSON_ICONS, LessonIcon, Plus, Save, Star, TYPE_ICONS, Timer, Trash, Up, Warn } from '../icons.tsx'
+import { Back, Book, CodeIcon, Copy, Down, Folder, ImagePlus, LESSON_ICONS, LessonIcon, Plus, Save, Star, TYPE_ICONS, Timer, Trash, Up, Warn } from '../icons.tsx'
 import { CodeBlock, Logo, Screen, Tip } from '../ui.tsx'
 import { CatLook, CatMove, CatPick, CatWrite } from '../icons.tsx'
 import { newQuestion, registry } from '../types/registry.tsx'
@@ -19,9 +19,20 @@ export default function Editor() {
   const { id } = useParams()
   const isNew = id === 'new'
   const go = useNavigate()
-  const [lesson, setLesson] = useState<LessonInput | null>(isNew ? { title: '', emoji: 'target', questions: [newQuestion('mcq')] } : null)
+  const [lesson, setLesson] = useState<LessonInput | null>(isNew ? { title: '', emoji: 'target', folder: '', cover: '', questions: [newQuestion('mcq')] } : null)
   const [errs, setErrs] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [folders, setFolders] = useState<string[]>([])
+  const [coverErr, setCoverErr] = useState('')
+  const coverIn = useRef<HTMLInputElement>(null)
+  useEffect(() => void api<{ folder?: string }[]>('/lessons').then((ls) => setFolders([...new Set(ls.map((l) => l.folder ?? '').filter(Boolean))].sort()), () => {}), [])
+  const onCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    setCoverErr('')
+    try { const cover = await uploadCover(f); setLesson((l) => l && { ...l, cover }) } catch (x) { setCoverErr((x as Error).message) }
+  }
   const [open, setOpen] = useState<Record<string, boolean>>({}) // textos de lectura desplegados
 
   useEffect(() => void (!isNew && api<LessonInput>(`/lessons/${id}`).then((l) => ((saved.current = JSON.stringify(l)), setLesson(l)), () => go('/admin'))), [id])
@@ -95,6 +106,17 @@ export default function Editor() {
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 font-bold"><Folder />
+            <input className="input !w-56 !py-1.5 !text-base" list="carpetas" placeholder="Carpeta (opcional)" aria-label="Carpeta" value={lesson.folder ?? ''} maxLength={40} onChange={(e) => setLesson({ ...lesson, folder: e.target.value })} />
+          </label>
+          <datalist id="carpetas">{folders.map((f) => <option key={f} value={f} />)}</datalist>
+          <input ref={coverIn} type="file" accept="image/*" hidden onChange={onCover} />
+          <button type="button" className={ghost} onClick={() => coverIn.current?.click()}><ImagePlus /> {lesson.cover ? 'Cambiar portada' : 'Agregar portada'}</button>
+          {lesson.cover && <button type="button" className={ghost} onClick={() => setLesson({ ...lesson, cover: '' })}><Trash /> Quitar</button>}
+          {coverErr && <span className="font-bold text-pink">{coverErr}</span>}
+        </div>
+        {lesson.cover && <img src={`/covers/${lesson.cover}`} alt="Portada de la lección" className="aspect-video w-full max-w-sm rounded-xl border-[3px] border-edge object-cover" />}
       </div>
 
       <div className="space-y-6">
@@ -217,7 +239,7 @@ export default function Editor() {
 // Paleta de tipos de pregunta, por categorías. En escritorio vive en una columna fija a la derecha.
 const CATS: { name: string; Icon: typeof CatPick; c: string; types: TypeId[] }[] = [
   { name: 'Elegir', Icon: CatPick, c: 'var(--color-lime)', types: ['mcq', 'multi', 'tf', 'dropdown'] },
-  { name: 'Escribir', Icon: CatWrite, c: 'var(--color-cyan)', types: ['fill', 'open', 'table'] },
+  { name: 'Escribir', Icon: CatWrite, c: 'var(--color-cyan)', types: ['fill', 'open', 'table', 'blocks'] },
   { name: 'Mover y unir', Icon: CatMove, c: 'var(--color-pink)', types: ['order', 'match', 'sort', 'drag'] },
   { name: 'Observar', Icon: CatLook, c: 'var(--color-sun)', types: ['grid', 'tap'] },
 ]

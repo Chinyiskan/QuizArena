@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { Lesson } from '../../../shared/questions.ts'
 import { api, socket } from '../lib.ts'
 import { Logo, Screen } from '../ui.tsx'
-import { Book, Copy, Download, Edit, Homework, Key, LessonIcon, Reports, Rocket, Trash, Upload, X } from '../icons.tsx'
+import { Book, Chevron, Copy, Download, Edit, Folder, Homework, Key, LessonIcon, Reports, Rocket, Trash, Upload, X } from '../icons.tsx'
 
 function Gate({ onOk }: { onOk: () => void }) {
   const [t, setT] = useState('')
@@ -36,7 +36,7 @@ function Gate({ onOk }: { onOk: () => void }) {
 
 type Room = { pin: string; title: string; mode: 'live' | 'homework'; players: number; closed: boolean }
 
-const pick = ({ title, emoji, questions }: Lesson) => ({ title, emoji, questions })
+const pick = ({ title, emoji, folder, cover, questions }: Lesson) => ({ title, emoji, folder, cover, questions })
 
 function download(l: Lesson) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(pick(l), null, 2)], { type: 'application/json' }))
@@ -77,6 +77,21 @@ export default function Admin() {
       }
     }
     if (file.current) file.current.value = ''
+    load()
+  }
+
+  const [shut, setShut] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('qa-folders-shut') ?? '[]') } catch { return [] } })
+  const toggle = (f: string) => setShut((s) => {
+    const n = s.includes(f) ? s.filter((x) => x !== f) : [...s, f]
+    try { localStorage.setItem('qa-folders-shut', JSON.stringify(n)) } catch {}
+    return n
+  })
+  const folders = [...new Set((list ?? []).map((l) => l.folder ?? '').filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const groups = [...folders, ''].map((f) => [f, (list ?? []).filter((l) => (l.folder ?? '') === f)] as const).filter(([, ls]) => ls.length)
+  const move = async (l: Lesson, to: string) => {
+    if (to === '__new__') to = (prompt('Nombre de la carpeta') ?? '').trim().slice(0, 40)
+    if (to === (l.folder ?? '') || to === '__new__') return
+    await api(`/lessons/${l.id}`, 'PUT', { ...pick(l), folder: to }).catch((e) => setErr(e.message))
     load()
   }
 
@@ -138,9 +153,17 @@ export default function Admin() {
           <p className="opacity-70">Crea la primera y lánzala a tu grupo.</p>
         </div>
       )}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {list?.map((l, i) => (
-          <article key={l.id} className="card flex flex-col gap-4 p-5" style={{ transform: `rotate(${[-0.8, 0.6, -0.4][i % 3]}deg)` }}>
+      {groups.map(([f, ls]) => (
+        <section key={f} className="mb-8" aria-label={f || 'Sin carpeta'}>
+          {folders.length > 0 && (
+            <button className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide opacity-80 hover:opacity-100" aria-expanded={!shut.includes(f)} onClick={() => toggle(f)}>
+              <Chevron className={shut.includes(f) ? '-rotate-90' : ''} /> <Folder /> {f || 'Sin carpeta'} <span className="sticker !text-xs">{ls.length}</span>
+            </button>
+          )}
+          {!shut.includes(f) && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {ls.map((l, i) => (
+          <article key={l.id} className="card flex flex-col gap-4 overflow-hidden p-5" style={{ transform: `rotate(${[-0.8, 0.6, -0.4][i % 3]}deg)` }}>
+            {l.cover && <img src={`/covers/${l.cover}`} alt="" loading="lazy" className="-mx-5 -mt-5 aspect-video w-[calc(100%+2.5rem)] max-w-none border-b-[3px] border-edge object-cover" />}
             <div className="flex items-start gap-3">
               <span className="text-5xl"><LessonIcon name={l.emoji} /></span>
               <div className="min-w-0">
@@ -171,10 +194,17 @@ export default function Admin() {
                   <Trash />
                 </button>
               </div>
+              <select className="input !py-1 !text-sm" aria-label="Mover a carpeta" value={l.folder ?? ''} onChange={(e) => move(l, e.target.value)}>
+                <option value="">Sin carpeta</option>
+                {folders.map((x) => <option key={x} value={x}>{x}</option>)}
+                <option value="__new__">+ Nueva carpeta…</option>
+              </select>
             </div>
           </article>
         ))}
-      </div>
+          </div>}
+        </section>
+      ))}
     </Screen>
   )
 }

@@ -1,7 +1,8 @@
 import Fastify from 'fastify'
 import fastifyStatic from '@fastify/static'
 import { Server } from 'socket.io'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import { TOTP_SECRET, checkConfig, clientIp, cookieHeader, isAdmin, login, logout, tooMany } from './auth.ts'
 import { lessonInputSchema, lessonProblems } from '../shared/questions.ts'
@@ -70,6 +71,17 @@ app.get('/api/avatars', async () => {
   return existsSync(dir) ? readdirSync(dir).filter((f) => /\.(png|jpe?g|webp|gif|svg)$/i.test(f)) : []
 })
 
+// Portadas: el navegador manda el WebP ya reducido (canvas). Aquí solo se valida que SEA un WebP (nunca SVG: se serviría desde nuestro origen).
+mkdirSync('data/covers', { recursive: true })
+app.addContentTypeParser('image/webp', { parseAs: 'buffer', bodyLimit: 400_000 }, (_req, body, done) => done(null, body))
+app.post('/api/covers', async (req, reply) => {
+  const b = req.body
+  if (!Buffer.isBuffer(b) || b.length < 12 || b.subarray(0, 4).toString() !== 'RIFF' || b.subarray(8, 12).toString() !== 'WEBP') return reply.code(400).send({ error: 'La portada debe ser una imagen WebP' })
+  const name = createHash('sha256').update(b).digest('hex').slice(0, 16) + '.webp'
+  writeFileSync(`data/covers/${name}`, b)
+  return { name }
+})
+
 app.get('/api/lessons', async () => lessons.list())
 app.get<{ Params: { id: string } }>('/api/lessons/:id', async (req, reply) => lessons.get(req.params.id) ?? reply.code(404).send({ error: 'no existe' }))
 
@@ -111,7 +123,7 @@ app.get<{ Params: { pin: string } }>('/api/rooms/:pin', async (req, reply) => {
   if (tooMany(`pin:${ip}`, PIN_TRIES, 10 * 60e3, false)) return reply.code(429).send({ error: 'Demasiados intentos, espera unos minutos' })
   const r = getRoom(req.params.pin)
   if (!r) tooMany(`pin:${ip}`, PIN_TRIES, 10 * 60e3) // solo los PIN fallidos cuentan: no frena a un salón entero tras la misma IP
-  return r ? { title: r.lesson.title, mode: r.mode, taken: [...r.players.values()].map((p) => p.avatar), open: r.mode === 'homework' ? !r.closed : r.phase !== 'podium' } : reply.code(404).send({ error: 'PIN no válido' })
+  return r ? { title: r.lesson.title, cover: r.lesson.cover ?? '', mode: r.mode, taken: [...r.players.values()].map((p) => p.avatar), open: r.mode === 'homework' ? !r.closed : r.phase !== 'podium' } : reply.code(404).send({ error: 'PIN no válido' })
 })
 
 // --- Tiempo real ---
@@ -201,6 +213,8 @@ io.on('connection', (s) => {
 
 // Avatares del profe: se sirven directo de public/avatars, así los que agregues aparecen sin volver a compilar.
 if (existsSync('public/avatars')) await app.register(fastifyStatic, { root: resolve('public/avatars'), prefix: '/avatars/', decorateReply: false, maxAge: '1h' })
+
+await app.register(fastifyStatic, { root: resolve('data/covers'), prefix: '/covers/', decorateReply: false, maxAge: '1d', immutable: true }) // nombre = hash del contenido
 
 // --- Cliente compilado (producción / túnel) ---
 if (existsSync('client-dist')) {

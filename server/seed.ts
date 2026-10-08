@@ -3,7 +3,7 @@ import { lessons } from './db.ts'
 
 lessons.save({
   title: 'Present Perfect',
-  emoji: 'hourglass',
+  emoji: 'hourglass', folder: '', cover: '',
   questions: [
     { id: '1', type: 'mcq', prompt: 'She ___ to Paris twice.', time: 20, points: 1000, explanation: 'Con "twice" (dos veces) usamos el present perfect: has + participio. Con "she" va "has".', data: { options: ['has been', 'have been', 'was', 'is going'], correct: 0 } },
     { id: '2', type: 'tf', prompt: '"I have seen him yesterday" is correct.', time: 15, points: 1000, explanation: '"Yesterday" marca un momento terminado del pasado: ahí se usa el pasado simple (saw), no el present perfect.', data: { correct: false } },

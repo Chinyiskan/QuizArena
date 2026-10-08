@@ -150,6 +150,20 @@ export const types = {
       return Math.max(0, (hits - wrong) / ok.size)
     },
   },
+  blocks: {
+    label: 'Bloques de código',
+    data: z.object({
+      lang: z.string().max(10).default('py'), // clave de CODE_LANGS (colores del bloque y resaltado)
+      lines: z.array(z.object({ t: z.string().max(120), i: z.number().int().min(0).max(3) })).max(15), // solución: texto + sangría, en orden
+      extra: z.array(z.string().max(120)).max(4).default([]), // bloques que sobran (distractores)
+      indent: z.boolean().default(true), // ¿también se califica la sangría?
+      bank: z.array(z.string()).optional(), // solo en la vista del estudiante: bloques + distractores, barajados
+    }),
+    answer: z.array(z.object({ t: z.string().max(120), i: z.number().int().min(0).max(3) })).max(20),
+    // parcial: fracción de posiciones con el bloque correcto (y la sangría, si cuenta); poner de más también resta
+    grade: (d: { lines: { t: string; i: number }[]; indent: boolean }, a: { t: string; i: number }[]) =>
+      d.lines.filter((l, k) => a[k] && norm(a[k].t) === norm(l.t) && (!d.indent || a[k].i === l.i)).length / Math.max(d.lines.length, a.length),
+  },
   open: {
     label: 'Respuesta abierta',
     data: z.object({ answers: z.array(text).min(1).max(10) }),
@@ -191,6 +205,7 @@ export const questionSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('table'), data: types.table.data }),
   z.object({ ...base, type: z.literal('grid'), data: types.grid.data }),
   z.object({ ...base, type: z.literal('tap'), data: types.tap.data }),
+  z.object({ ...base, type: z.literal('blocks'), data: types.blocks.data }),
   z.object({ ...base, type: z.literal('open'), data: types.open.data }),
 ])
 export type Question = z.infer<typeof questionSchema>
@@ -198,6 +213,8 @@ export type Question = z.infer<typeof questionSchema>
 export const lessonInputSchema = z.object({
   title: z.string().trim().min(1).max(80),
   emoji: z.string().max(8).default('🎯'),
+  folder: z.string().trim().max(40).default(''), // carpeta del dashboard ('' = sin carpeta)
+  cover: z.string().regex(/^[a-f0-9]{16}\.webp$/).or(z.literal('')).default(''), // portada: archivo en data/covers (POST /api/covers)
   questions: z.array(questionSchema).max(100),
 })
 export type LessonInput = z.infer<typeof lessonInputSchema>
@@ -287,6 +304,16 @@ function problemsOf(q: Question): string[] {
     case 'tap':
       if (!tapTokens(q.data.text).toks.some((t) => t.ok)) out.push('marca al menos una palabra correcta entre [corchetes]')
       break
+    case 'blocks': {
+      const t = q.data.lines.map((l) => norm(l.t))
+      if (q.data.lines.length < 2) out.push('escribe el código con al menos 2 líneas')
+      if (q.data.lines.length > 15) out.push('máximo 15 líneas')
+      if (!(q.data.lang in CODE_LANGS)) out.push('elige el lenguaje')
+      if (t.some((x) => !x)) out.push('hay bloques vacíos')
+      if (q.data.extra.some((x) => !norm(x))) out.push('hay bloques de sobra vacíos')
+      if (q.data.extra.some((x) => t.includes(norm(x)))) out.push('un bloque de sobra no puede ser igual a uno de la solución')
+      break
+    }
     case 'open':
       if (!q.data.answers.some((a) => a.trim())) out.push('agrega al menos una respuesta aceptada')
       break
@@ -340,6 +367,12 @@ function hideData(q: Question, seed: string): Question {
       let a = shuffled(q.data.items, rng(seed))
       if (a.every((x, i) => x === q.data.items[i])) a = [...a.slice(1), a[0]] // nunca llega ya resuelto
       return { ...q, data: { items: a } }
+    }
+    case 'blocks': {
+      let bank = shuffled([...q.data.lines.map((l) => l.t), ...q.data.extra], rng(seed))
+      const sol = q.data.lines.map((l) => l.t)
+      if (!q.data.extra.length && bank.every((x, i) => x === sol[i])) bank = [...bank.slice(1), bank[0]] // nunca llega ya resuelto
+      return { ...q, data: { lang: q.data.lang, lines: [], extra: [], indent: q.data.indent, bank } }
     }
     case 'match':
       return { ...q, data: { pairs: q.data.pairs.map((p) => ({ left: p.left, right: '' })), pool: shuffled(q.data.pairs.map((p) => p.right), rng(seed)) } }

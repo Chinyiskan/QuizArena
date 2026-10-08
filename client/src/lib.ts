@@ -25,6 +25,23 @@ export async function api<T = any>(path: string, method = 'GET', json?: unknown)
   return body
 }
 
+/** Reduce la imagen a 960x540 (recorte centrado, WebP) en el navegador y la sube. Devuelve el nombre del archivo. */
+export async function uploadCover(file: File): Promise<string> {
+  const img = await createImageBitmap(file).catch(() => { throw new Error('No se pudo leer la imagen') })
+  const W = 960, H = 540
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const k = Math.max(W / img.width, H / img.height)
+  c.getContext('2d')!.drawImage(img, (W - img.width * k) / 2, (H - img.height * k) / 2, img.width * k, img.height * k)
+  const blob = await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/webp', 0.82))
+  if (!blob || blob.type !== 'image/webp') throw new Error('Tu navegador no puede convertir a WebP')
+  const res = await fetch('/api/covers', { method: 'POST', headers: { 'content-type': 'image/webp' }, body: blob })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.error ?? res.statusText)
+  return body.name
+}
+
 export const socket = io()
 // Si el servidor corta la conexión (p. ej. el límite anti-spam), socket.io NO reintenta solo: se reconecta tras un respiro.
 socket.on('disconnect', (reason) => void (reason === 'io server disconnect' && setTimeout(() => socket.connect(), 2000)))

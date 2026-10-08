@@ -6,7 +6,7 @@ import { addPlayer, answer, createRoom, getRoom, initGame, next, usePower } from
 const hostRoom = new Set(['host-socket']) // un profe "conectado": así también se arma el panel (dashOf) en cada broadcast
 initGame({ to: () => ({ emit() {} }), sockets: { adapter: { rooms: new Map([['*:host', hostRoom]]) } } } as any)
 const mcq = (id: string) => ({ id, type: 'mcq' as const, prompt: id, time: 20, points: 1000, data: { options: ['a', 'b', 'c', 'd'], correct: 1 } })
-const lesson = { id: 'l', updatedAt: 0, title: 'motor', emoji: 'flask', questions: [mcq('1'), mcq('2'), mcq('3'), mcq('4')] }
+const lesson = { id: 'l', updatedAt: 0, title: 'motor', emoji: 'flask', folder: '', cover: '', questions: [mcq('1'), mcq('2'), mcq('3'), mcq('4')] }
 
 function setup() {
   const r = getRoom(createRoom(lesson))!

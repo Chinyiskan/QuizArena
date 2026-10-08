@@ -19,6 +19,7 @@ const lesson = await post('/api/lessons', {
     { id: 'j', type: 'table', prompt: 'Tabla', time: 10, points: 1000, passage: 'Texto de apoyo', data: { header: true, rows: [['K', 'V'], ['a', '[b]']] } },
     { id: 'k', type: 'grid', prompt: 'Cuadrícula', time: 10, points: 1000, data: { cols: ['A', 'B'], rows: [{ text: 'r1', correct: 0 }, { text: 'r2', correct: 1 }] } },
     { id: 'l', type: 'tap', prompt: 'Toca', time: 10, points: 1000, data: { text: 'x [y] z' } },
+    { id: 'm', type: 'blocks', prompt: 'Ordena el código', time: 10, points: 1000, data: { lang: 'py', indent: true, extra: ['while True:'], lines: [{ t: 'for i in x:', i: 0 }, { t: 'print(i)', i: 1 }] } },
     { id: 'i', type: 'drag', prompt: 'Arrastra', time: 10, points: 1000, data: { text: 'El [sol] brilla', extra: ['luna'] } },
   ],
 })
@@ -77,6 +78,7 @@ const rounds: [unknown, unknown][] = [
   [['b'], ['x']], // table
   [[0, 1], [1, 0]], // grid
   [[1], [0, 2]], // tap: Beto acierta 0 y falla 2
+  [[{ t: 'for i in x:', i: 0 }, { t: 'print(i)', i: 1 }], [{ t: 'print(i)', i: 1 }, { t: 'for i in x:', i: 0 }]], // blocks: Beto 0/2
   [['sol'], ['luna']], // drag
 ]
 for (const [i, [a1, a2]] of rounds.entries()) {
@@ -92,14 +94,15 @@ for (const [i, [a1, a2]] of rounds.entries()) {
   if (state.question.type === 'table') assert.ok(d.rows[1][1] === '[]' && state.question.passage === 'Texto de apoyo', 'table no filtra y conserva la lectura')
   if (state.question.type === 'grid') assert.ok(d.rows.every((r: any) => r.correct === -1), 'grid no filtra')
   if (state.question.type === 'tap') assert.equal(d.text, 'x y z', 'tap llega sin marcas')
+  if (state.question.type === 'blocks') assert.ok(d.lines.length === 0 && d.bank.length === 3 && !JSON.stringify(d).includes('"i":1'), 'blocks solo expone el banco')
   if (state.question.type === 'drag') assert.ok(d.text === 'El [] brilla' && d.bank.length === 2, 'drag solo expone el banco')
   p1.emit('player:answer', a1)
   p2.emit('player:answer', a2)
   await until(() => state.phase === 'reveal')
   const t = state.question.type
-  if (['order', 'match', 'sort', 'drag', 'table', 'grid', 'tap'].includes(t)) {
+  if (['order', 'match', 'sort', 'drag', 'table', 'grid', 'tap', 'blocks'].includes(t)) {
     assert.equal(state.credit[j1.id], 1, `${t}: Ana perfecta`)
-    const want = { order: 1 / 3, match: 0, sort: 2 / 3, drag: 0, table: 0, grid: 0, tap: 0 }[t as 'order']
+    const want = { order: 1 / 3, match: 0, sort: 2 / 3, drag: 0, table: 0, grid: 0, tap: 0, blocks: 0 }[t as 'order']
     assert.ok(Math.abs(state.credit[j2.id] - want) < 1e-9, `${t}: Beto ${state.credit[j2.id]} vs ${want}`)
   }
   if (state.question.type === 'tf') assert.deepEqual(state.dist, [1, 1], 'tf: [verdadero, falso]')
@@ -123,7 +126,7 @@ const list = await fetch(BASE + '/api/reports', { headers: bare }).then((r) => r
 const meta = list.find((r: any) => r.title === 'Smoke')
 assert.ok(meta?.closed, 'reporte de la partida en vivo guardado y cerrado')
 const rep = await fetch(BASE + `/api/reports/${meta.id}`, { headers: bare }).then((r) => r.json())
-assert.equal(rep.questions.length, 12)
+assert.equal(rep.questions.length, 13)
 assert.equal(rep.players[0].name, 'Ana')
 assert.equal(rep.players.length, 3, 'incluye al que entró tarde')
 assert.equal(rep.players.find((p: any) => p.name === 'Cami').results[0], null, 'quien entró tarde no participó en la 1')

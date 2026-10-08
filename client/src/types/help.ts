@@ -7,6 +7,7 @@ export const TYPE_HELP: Record<TypeId, { what: string; how: string; tip: string 
   tf: { what: 'Una afirmación que es verdadera o falsa.', how: 'Toca Verdadero o Falso.', tip: 'Redacta la afirmación sin ambigüedad.' },
   fill: { what: 'Un texto con huecos que se escriben.', how: 'Escribe la palabra de cada hueco.', tip: 'Pon los huecos entre [corchetes]; alternativas con |, como [París|paris].' },
   dropdown: { what: 'Texto con huecos que se eligen de un menú.', how: 'Elige la opción de cada menú.', tip: 'Escribe [correcta|mala1|mala2]: la primera es la correcta.' },
+  blocks: { what: 'Armar un programa con bloques desordenados, como en Scratch.', how: 'Toca los bloques en orden y ajusta la sangría.', tip: 'Pega el código que funciona; cada línea es un bloque. Puedes añadir bloques que sobran.' },
   order: { what: 'Poner elementos en el orden correcto.', how: 'Arrastra (o toca y mueve) cada ficha.', tip: 'Escríbelos en el orden correcto; se barajan solos.' },
   match: { what: 'Unir cada elemento con su pareja.', how: 'Toca el elemento y luego su pareja.', tip: 'Crédito parcial por cada pareja bien.' },
   sort: { what: 'Clasificar elementos en categorías.', how: 'Arrastra cada ficha a su categoría.', tip: 'Máx. 4 categorías y 12 elementos; sin repetidos.' },
