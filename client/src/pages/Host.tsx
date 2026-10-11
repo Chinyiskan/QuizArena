@@ -7,18 +7,18 @@ import { copyText } from '../browser.ts'
 import { Avatar, Board, Confetti, Logo, NextIn, Screen, MusicButton, SoundButton } from '../ui.tsx'
 import HwPanel from './HwPanel.tsx'
 import Control from './Control.tsx'
-import { Bolt, Bomb, Hand, Medal, Next, Pause, PowerX2, Reports, Sparkles, Target, Trophy, Wave, X } from '../icons.tsx'
+import { Bolt, Bomb, Copy, Hand, Plus, Medal, Next, Pause, PowerX2, Reports, Sparkles, Target, Trophy, Wave, X } from '../icons.tsx'
 import { BombBadge, BombReport } from '../bomb.tsx'
 import { STYLES, type Style } from '../../../shared/powers.ts'
 
 const PAUSES = [5, 8, 12, 20]
 
 /** Manual (tú avanzas) o Automático (tras cada pregunta muestra la tabla unos segundos y sigue solo). */
-function AutoControl({ s, pin }: { s: LiveView; pin: string }) {
+function AutoControl({ s, pin, compact }: { s: LiveView; pin: string; compact?: boolean }) {
   const secs = Math.round(s.pauseMs / 1000)
   const set = (auto: boolean, sec = secs) => socket.emit('host:auto', pin, auto, sec)
   return (
-    <div className="card-dark mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 py-2">
+    <div className={compact ? 'flex items-center gap-2' : 'card-dark mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 py-2'}>
       <div role="radiogroup" aria-label="Avance de las preguntas" className="flex overflow-hidden rounded-xl border-[3px] border-edge">
         {[false, true].map((a) => (
           <button key={String(a)} role="radio" aria-checked={s.auto === a} onClick={() => set(a)} className={`flex items-center gap-1.5 px-3 py-1.5 font-display ${s.auto === a ? 'bg-lime text-edge' : 'bg-white/10'}`}>
@@ -28,7 +28,7 @@ function AutoControl({ s, pin }: { s: LiveView; pin: string }) {
       </div>
       {s.auto && (
         <label className="flex items-center gap-2 text-sm font-bold">
-          Pausa entre preguntas
+          {compact ? 'Pausa' : 'Pausa entre preguntas'}
           <select className="input !w-auto !py-1 !text-base" value={secs} onChange={(e) => set(true, +e.target.value)}>
             {(PAUSES.includes(secs) ? PAUSES : [...PAUSES, secs].sort((a, b) => a - b)).map((n) => <option key={n} value={n}>{n} s</option>)}
           </select>
@@ -157,17 +157,62 @@ function LiveHost({ s, pin }: { s: LiveView & { deadline: number; autoDeadline: 
     return () => removeEventListener('keydown', onKey)
   }, [s.phase])
 
+  const header = (
+    <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+      <Logo to="/admin" size="text-2xl" />
+      <span className="sticker !text-sm max-w-[40ch] truncate" title={s.title}>{s.title}</span>
+      <button
+        type="button" className="flex items-center gap-1.5 rounded-full border-[3px] border-white/25 px-3 py-0.5 font-bold hover:border-cyan" title="Copiar el link para estudiantes (también sirve para los que llegan tarde)"
+        onClick={() => copyText(url).then(() => (setCopied(true), setTimeout(() => setCopied(false), 1500)), () => {})}
+      >
+        <span className="text-xs uppercase opacity-60">PIN</span> <span className="font-display text-lg tracking-widest">{pin}</span> <Copy /> {copied && <span className="text-lime">¡Copiado!</span>}
+      </button>
+      <span className="ml-auto flex gap-2">
+        <MusicButton />
+        <SoundButton />
+        <button className="btn btn-ghost" onClick={() => confirm('¿Terminar la partida?') && end()}>Terminar</button>
+      </span>
+    </header>
+  )
+
+  if (s.phase === 'question' || s.phase === 'reveal')
+    return (
+      <Control
+        s={s} d={d} left={left} onKick={kick} header={header}
+        controls={
+          s.phase === 'question' ? (
+            <>
+              <button className="btn btn-ghost !py-1.5" onClick={() => socket.emit('host:time', pin, 10)} title="Dar 10 segundos más a esta pregunta"><Plus /> 10 s</button>
+              <AutoControl s={s} pin={pin} compact />
+              <button className="btn btn-sun !py-1.5" onClick={next} title="Atajo: barra espaciadora">Cerrar ahora <kbd className="rounded border-2 border-edge px-1 text-xs">Espacio</kbd></button>
+            </>
+          ) : (
+            <>
+              {s.auto && <div className="w-44"><NextIn key={s.index} deadline={s.autoDeadline} /></div>}
+              {s.auto && <button className="btn btn-ghost !py-1.5" onClick={() => socket.emit('host:auto', pin, false)}><Pause /> Pausar</button>}
+              {!s.auto && <AutoControl s={s} pin={pin} compact />}
+              <button className="btn btn-pink !py-1.5" onClick={next} title="Atajo: barra espaciadora">{s.index + 1 >= s.total || (s.style === 'bomb' && s.alive <= 1 && s.players.length > 1) ? <>Ver podio <Trophy /></> : <>Siguiente <Next /></>} <kbd className="rounded border-2 border-edge px-1 text-xs">Espacio</kbd></button>
+            </>
+          )
+        }
+        extra={
+          <>
+            {s.style === 'bomb' && s.phase === 'question' && <BombBadge bombs={s.bombs} alive={s.alive} hot={left <= 5} />}
+            {s.style === 'bomb' && s.phase === 'reveal' && <BombReport players={s.players} booms={s.booms} defused={s.defused} alive={s.alive} compact />}
+            {s.phase === 'reveal' && Object.entries(s.steals).map(([thief, st]) => (
+              <p key={thief} className="card-dark p-3 text-sm font-bold text-pink">
+                {st.blocked ? `${s.players.find((p) => p.id === st.from)?.name} bloqueó con su escudo el robo de ${s.players.find((p) => p.id === thief)?.name}` : `${s.players.find((p) => p.id === thief)?.name} le robó ${st.amount} puntos a ${s.players.find((p) => p.id === st.from)?.name}`}
+              </p>
+            ))}
+            {s.phase === 'reveal' && Object.keys(s.drops).length > 0 && <p className="card-dark flex items-center gap-2 p-3 text-sm font-bold"><PowerX2 /> {Object.keys(s.drops).length} {Object.keys(s.drops).length === 1 ? 'jugador consiguió un poder' : 'jugadores consiguieron poderes'}</p>}
+          </>
+        }
+      />
+    )
+
   return (
     <Screen className="!max-w-[min(96vw,1280px)] flex flex-col gap-5">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <Logo to="/admin" size="text-2xl" />
-        <span className="sticker !text-sm">{s.title}</span>
-        <span className="flex gap-2">
-          <MusicButton />
-          <SoundButton />
-          <button className="btn btn-ghost" onClick={() => confirm('¿Terminar la partida?') && end()}>Terminar</button>
-        </span>
-      </header>
+      {header}
 
       {s.phase === 'lobby' && (
         <>
@@ -204,39 +249,6 @@ function LiveHost({ s, pin }: { s: LiveView & { deadline: number; autoDeadline: 
             </button>
           </div>
         </>
-      )}
-
-      {(s.phase === 'question' || s.phase === 'reveal') && (
-        <Control
-          s={s} d={d} left={left} onKick={kick}
-          controls={
-            s.phase === 'question' ? (
-              <>
-                <button className="btn btn-sun" onClick={next} title="Atajo: barra espaciadora">Cerrar ahora</button>
-                <AutoControl s={s} pin={pin} />
-              </>
-            ) : (
-              <>
-                {s.auto && <div className="w-48"><NextIn key={s.index} deadline={s.autoDeadline} /></div>}
-                {s.auto && <button className="btn btn-ghost" onClick={() => socket.emit('host:auto', pin, false)}><Pause /> Pausar</button>}
-                <button className="btn btn-pink" onClick={next} title="Atajo: barra espaciadora">{s.index + 1 >= s.total || (s.style === 'bomb' && s.alive <= 1 && s.players.length > 1) ? <>Ver podio <Trophy /></> : <>Siguiente <Next /></>}</button>
-                {!s.auto && <AutoControl s={s} pin={pin} />}
-              </>
-            )
-          }
-          extra={
-            <>
-              {s.style === 'bomb' && s.phase === 'question' && <BombBadge bombs={s.bombs} alive={s.alive} hot={left <= 5} />}
-              {s.style === 'bomb' && s.phase === 'reveal' && <BombReport players={s.players} booms={s.booms} defused={s.defused} alive={s.alive} />}
-              {s.phase === 'reveal' && Object.entries(s.steals).map(([thief, st]) => (
-                <p key={thief} className="text-center font-display text-lg text-pink">
-                  {st.blocked ? `${s.players.find((p) => p.id === st.from)?.name} bloqueó con su escudo el robo de ${s.players.find((p) => p.id === thief)?.name}` : `${s.players.find((p) => p.id === thief)?.name} le robó ${st.amount} puntos a ${s.players.find((p) => p.id === st.from)?.name}`}
-                </p>
-              ))}
-              {s.phase === 'reveal' && Object.keys(s.drops).length > 0 && <p className="flex items-center justify-center gap-2 text-center font-display text-lg"><PowerX2 /> {Object.keys(s.drops).length} {Object.keys(s.drops).length === 1 ? 'jugador consiguió un poder' : 'jugadores consiguieron poderes'}</p>}
-            </>
-          }
-        />
       )}
 
       {s.phase === 'podium' && (

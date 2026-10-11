@@ -84,6 +84,10 @@ const rounds: [unknown, unknown][] = [
 for (const [i, [a1, a2]] of rounds.entries()) {
   host.emit('host:next', pin)
   await until(() => state.phase === 'question' && state.index === i + 1)
+  if (i === 0) { // más tiempo: la cuenta sube ~10 s
+    host.emit('host:time', pin, 10)
+    await until(() => state.leftMs > 12000)
+  }
   const hidden = JSON.stringify(state.question.data)
   if (state.question.type === 'fill') assert.ok(!/Francia|París/.test(hidden), 'fill no filtra la solución')
   if (state.question.type === 'open') assert.deepEqual(state.question.data.answers, [])

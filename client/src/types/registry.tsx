@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { uid } from '../browser.ts'
-import type { Question, TypeId } from '../../../shared/questions.ts'
+import { DEFAULT_TIME, type Question, type TypeId } from '../../../shared/questions.ts'
 import { ChoiceCorrect, ChoiceEditor, ChoicePlayer } from './choice.tsx'
 import { TfCorrect, TfEditor, TfPlayer } from './tf.tsx'
 import { BlanksCorrect, BlanksEditor, BlanksPlayer } from './blanks.tsx'
@@ -42,4 +42,4 @@ export const registry: Record<TypeId, Entry> = {
 }
 
 export const newQuestion = (type: TypeId): Question =>
-  ({ id: uid(), type, prompt: '', time: 20, points: 1000, data: registry[type].blank() }) as Question
+  ({ id: uid(), type, prompt: '', time: DEFAULT_TIME[type], points: 1000, data: registry[type].blank() }) as Question

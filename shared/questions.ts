@@ -173,6 +173,12 @@ export const types = {
 } as const
 
 export type TypeId = keyof typeof types
+
+/** Segundos que se sugieren al crear una pregunta de cada tipo (el profe puede cambiarlos). Leer y armar toma más que tocar. */
+export const DEFAULT_TIME: Record<TypeId, number> = {
+  tf: 15, mcq: 20, multi: 30, open: 30, fill: 30, dropdown: 30, order: 30,
+  match: 45, sort: 45, drag: 45, grid: 45, tap: 45, table: 60, blocks: 90,
+}
 export const typeIds = Object.keys(types) as TypeId[]
 
 /** Lenguajes del bloque de código de una pregunta (valor -> nombre visible). */

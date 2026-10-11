@@ -64,8 +64,11 @@ export function useRoom<T extends RoomView = LiveView>(onConnect: () => void) {
 }
 
 /** Extras del profe en vivo: quién respondió, bien/mal en vivo y la pregunta con su solución. Llega justo después de 'state'. */
+// El 'dash' llega justo después del 'state', antes de que el panel exista (al recargar o entrar): se guarda el último para no perderlo.
+let lastDash: DashView | null = null
+socket.on('dash', (x: DashView) => (lastDash = x))
 export function useDash() {
-  const [d, setD] = useState<DashView | null>(null)
+  const [d, setD] = useState<DashView | null>(lastDash)
   useEffect(() => {
     socket.on('dash', setD)
     return () => void socket.off('dash', setD)

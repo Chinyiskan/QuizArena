@@ -7,7 +7,7 @@ import { resolve } from 'node:path'
 import { TOTP_SECRET, checkConfig, clientIp, cookieHeader, isAdmin, login, logout, tooMany } from './auth.ts'
 import { lessonInputSchema, lessonProblems } from '../shared/questions.ts'
 import { lessons, reports } from './db.ts'
-import { addPlayer, answer, broadcast, closeRoom, createRoom, emitHw, getRoom, hostNext, hwAnswer, hwLock, hidesOf, hwNext, initGame, isReturning, kick, listRooms, setAuto, setOnline, setStyle, usePower } from './game.ts'
+import { addPlayer, answer, broadcast, closeRoom, createRoom, emitHw, getRoom, hostNext, addTime, hwAnswer, hwLock, hidesOf, hwNext, initGame, isReturning, kick, listRooms, setAuto, setOnline, setStyle, usePower } from './game.ts'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const PUBLIC_URL = process.env.PUBLIC_URL ?? ''
@@ -149,6 +149,7 @@ io.on('connection', (s) => {
   })
   const host = (pin: unknown) => (s.data.host !== undefined && s.data.host === pin ? getRoom(pin as string) : undefined)
   s.on('host:next', (pin: string) => { const r = host(pin); if (r) hostNext(r) })
+  s.on('host:time', (pin: string, secs: unknown) => { const r = host(pin); if (r && typeof secs === 'number') addTime(r, secs) })
   s.on('host:auto', (pin: string, auto: boolean, secs?: number) => { const r = host(pin); if (r) setAuto(r, !!auto, typeof secs === 'number' ? secs : undefined) })
   s.on('host:style', (pin: string, style: unknown) => { const r = host(pin); if (r && typeof style === 'string') setStyle(r, style) })
   s.on('host:lock', (pin: string) => { const r = host(pin); if (r) hwLock(r) })

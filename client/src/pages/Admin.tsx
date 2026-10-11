@@ -51,6 +51,7 @@ export default function Admin() {
   const [err, setErr] = useState('')
   const go = useNavigate()
   const file = useRef<HTMLInputElement>(null)
+  const [shut, setShut] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('qa-folders-shut') ?? '[]') } catch { return [] } })
 
   const load = () => {
     api<Lesson[]>('/lessons').then(setList, (e) => (e.status === 401 ? setOk(false) : setErr(e.message)))
@@ -80,7 +81,6 @@ export default function Admin() {
     load()
   }
 
-  const [shut, setShut] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('qa-folders-shut') ?? '[]') } catch { return [] } })
   const toggle = (f: string) => setShut((s) => {
     const n = s.includes(f) ? s.filter((x) => x !== f) : [...s, f]
     try { localStorage.setItem('qa-folders-shut', JSON.stringify(n)) } catch {}

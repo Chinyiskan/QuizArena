@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { grade, score, hideAnswer, lessonProblems, lessonInputSchema, parseBlanks, tapTokens, type Question } from './questions.ts'
+import { DEFAULT_TIME, typeIds, grade, score, hideAnswer, lessonProblems, lessonInputSchema, parseBlanks, tapTokens, type Question } from './questions.ts'
 
 const base = { id: 'x', prompt: 'p', time: 20, points: 1000 }
 const mcq: Question = { ...base, type: 'mcq', data: { options: ['a', 'b'], correct: 1 } }
@@ -151,6 +151,10 @@ assert.equal(hb.lines.length + hb.extra.length, 0, 'no viaja la solución')
 assert.deepEqual(lessonProblems({ title: 't', questions: [blocks] }), [])
 assert.equal(lessonProblems({ title: 't', questions: [{ ...blocks, data: { ...blocks.data, extra: ['IF i:'] } } as Question] }).length, 1, 'distractor igual a un bloque')
 assert.equal(lessonProblems({ title: 't', questions: [{ ...blocks, data: { ...blocks.data, lines: [L1[0]] } } as Question] }).length, 1, 'mínimo 2 líneas')
+
+// tiempos sugeridos: todos los tipos tienen uno válido (5..120 s) y el de bloques es de al menos un minuto
+for (const t of typeIds) assert.ok(DEFAULT_TIME[t] >= 5 && DEFAULT_TIME[t] <= 120, t)
+assert.ok(DEFAULT_TIME.blocks >= 60)
 
 // carpeta y portada: por defecto vacías; la portada solo acepta nombres de archivo generados (nada de rutas)
 const L = { title: 't', questions: [mcq] }

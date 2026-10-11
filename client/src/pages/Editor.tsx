@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CODE_LANGS, lessonProblems, typeIds, types, type CodeLang, type LessonInput, type Question, type TypeId } from '../../../shared/questions.ts'
+import { CODE_LANGS, DEFAULT_TIME, lessonProblems, typeIds, types, type CodeLang, type LessonInput, type Question, type TypeId } from '../../../shared/questions.ts'
 import { api, uploadCover } from '../lib.ts'
 import { uid } from '../browser.ts'
 import { Back, Book, CodeIcon, Copy, Down, Folder, ImagePlus, LESSON_ICONS, LessonIcon, Plus, Save, Star, TYPE_ICONS, Timer, Trash, Up, Warn } from '../icons.tsx'
@@ -9,7 +9,7 @@ import { CatLook, CatMove, CatPick, CatWrite } from '../icons.tsx'
 import { newQuestion, registry } from '../types/registry.tsx'
 import { TYPE_HELP } from '../types/help.ts'
 
-const TIMES = [10, 15, 20, 30, 45, 60, 90]
+const TIMES = [10, 15, 20, 30, 45, 60, 90, 120]
 const POINTS = [0, 500, 1000, 2000]
 // si la lección trae un valor fuera de la lista (p. ej. 40s importado), se muestra igual en vez de caer en el primero
 const withCurrent = (xs: number[], v: number) => (xs.includes(v) ? xs : [...xs, v].sort((a, b) => a - b))
@@ -134,7 +134,7 @@ export default function Editor() {
                   aria-label="Tipo de pregunta"
                   onChange={(e) => {
                     const type = e.target.value as Question['type']
-                    setQ(i, { ...newQuestion(type), id: q.id, prompt: q.prompt, passage: q.passage, code: q.code, explanation: q.explanation, time: q.time, points: q.points })
+                    setQ(i, { ...newQuestion(type), id: q.id, prompt: q.prompt, passage: q.passage, code: q.code, explanation: q.explanation, time: q.time === DEFAULT_TIME[q.type] ? DEFAULT_TIME[type] : q.time, points: q.points }) // si el tiempo era el sugerido del tipo anterior, pasa al sugerido del nuevo
                   }}
                 >
                   {typeIds.map((t) => (

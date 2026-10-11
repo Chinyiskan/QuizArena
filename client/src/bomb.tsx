@@ -73,14 +73,14 @@ export function SpectatorCard() {
 }
 
 /** Proyector: quién explotó y quién se salvó en este reveal. */
-export function BombReport({ players, booms, defused, alive }: { players: P[]; booms: string[]; defused: string[]; alive: number }) {
+export function BombReport({ players, booms, defused, alive, compact }: { players: P[]; booms: string[]; defused: string[]; alive: number; compact?: boolean }) {
   const by = (ids: string[]) => ids.map((id) => players.find((p) => p.id === id)).filter((p): p is P => !!p)
   const boomed = by(booms), saved = by(defused)
   return (
     <div className="mx-auto w-full max-w-3xl space-y-3 text-center">
       {boomed.length > 0 ? (
         <motion.div initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 13 }} className="card bg-fire p-4">
-          <p className="font-display text-5xl"><Bomb className="inline" /> ¡BOOM!</p>
+          <p className={`font-display ${compact ? 'text-3xl' : 'text-5xl'}`}><Bomb className="inline" /> ¡BOOM!</p>
           <div className="mt-3 flex flex-wrap justify-center gap-3">
             {boomed.map((p, i) => (
               <motion.span key={p.id} initial={{ scale: 1.6, rotate: 0 }} animate={{ scale: 1, rotate: i % 2 ? 4 : -4 }} transition={{ delay: 0.15 + i * 0.12, type: 'spring' }} className="flex items-center gap-2 rounded-full border-[3px] border-edge bg-paper py-1 pr-4 pl-1 text-edge grayscale">

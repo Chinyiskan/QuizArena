@@ -33,6 +33,7 @@ type Room = {
   phase: Phase
   index: number
   endsAt: number
+  qStart: number // cuándo empezó la pregunta actual (endsAt cambia si el profe da más tiempo)
   players: Map<string, Player>
   answers: Map<string, Answer> // playerId -> respuesta de la pregunta actual
   gained: Map<string, number> // puntos ganados en la pregunta actual (para el reveal)
@@ -59,7 +60,7 @@ let io: Server
 const SALT = randomUUID()
 
 const newRoom = (pin: string, lesson: Lesson, mode: Mode): Room => ({
-  pin, lesson, mode, closed: false, startedAt: Date.now(), touched: Date.now(), phase: 'lobby', index: -1, endsAt: 0,
+  pin, lesson, mode, closed: false, startedAt: Date.now(), touched: Date.now(), phase: 'lobby', index: -1, endsAt: 0, qStart: 0,
   players: new Map(), answers: new Map(), gained: new Map(), credit: new Map(),
   style: 'powers', bombs: new Set(), booms: [], defused: [], steals: new Map(), hides: new Map(), drops: new Map(),
   auto: false, pauseMs: 8000, autoAt: 0,
@@ -429,8 +430,17 @@ export const hidesOf = (r: Room, playerId: string) => (r.phase === 'question' ? 
 /** "Siguiente" del profe. Un doble clic (o un clic justo cuando avanza el automático) cerraba la pregunta recién abierta. */
 export function hostNext(r: Room) {
   const cur = q(r)
-  if (r.phase === 'question' && cur && Date.now() - (r.endsAt - cur.time * 1000) < 1500) return
+  if (r.phase === 'question' && cur && Date.now() - r.qStart < 1500) return
   next(r)
+}
+
+/** El profe da más tiempo a la pregunta en curso (máx. 5 min en total desde ahora). */
+export function addTime(r: Room, secs: number) {
+  if (r.mode !== 'live' || r.phase !== 'question' || !(secs > 0)) return
+  r.endsAt = Math.min(r.endsAt + Math.min(secs, 60) * 1000, Date.now() + 300_000)
+  clearTimeout(r.timer)
+  r.timer = setTimeout(() => reveal(r), r.endsAt - Date.now() + 300)
+  broadcast(r)
 }
 
 export function next(r: Room) {
@@ -451,7 +461,8 @@ export function next(r: Room) {
     r.phase = 'question'
     if (r.style === 'bomb') r.bombs = new Set(pickBombs(alive.map((p) => p.id)))
     const cur = q(r)!
-    r.endsAt = Date.now() + cur.time * 1000
+    r.qStart = Date.now()
+    r.endsAt = r.qStart + cur.time * 1000
     r.timer = setTimeout(() => reveal(r), cur.time * 1000 + 300) // 300ms de gracia por latencia
   }
   broadcast(r)
