@@ -51,8 +51,11 @@ type Room = {
   auto: boolean
   pauseMs: number
   autoAt: number
-  autoTimer?: NodeJS.Timeout
+  autoTimer?: NodeJS.Timeout // también la cuenta de la tabla de posiciones
+  boardUntil: number // fin de la tabla de posiciones (0 = no se está mostrando); sigue siendo phase 'reveal'
 }
+
+const BOARD_MS = 5000
 
 const rooms = new Map<string, Room>()
 let io: Server
@@ -63,7 +66,7 @@ const newRoom = (pin: string, lesson: Lesson, mode: Mode): Room => ({
   pin, lesson, mode, closed: false, startedAt: Date.now(), touched: Date.now(), phase: 'lobby', index: -1, endsAt: 0, qStart: 0,
   players: new Map(), answers: new Map(), gained: new Map(), credit: new Map(),
   style: 'powers', bombs: new Set(), booms: [], defused: [], steals: new Map(), hides: new Map(), drops: new Map(),
-  auto: false, pauseMs: 8000, autoAt: 0,
+  auto: false, pauseMs: 8000, autoAt: 0, boardUntil: 0,
 })
 
 export function initGame(server: Server) {
@@ -184,6 +187,8 @@ export function view(r: Room) {
     pauseMs: r.pauseMs,
     // ms restantes para pasar solos a la siguiente (como leftMs: relativo, no un timestamp)
     autoLeftMs: r.phase === 'reveal' && r.auto ? Math.max(0, r.autoAt - Date.now()) : 0,
+    // ms restantes de la tabla de posiciones entre el reveal y la siguiente pregunta (0 = no se muestra)
+    boardMs: r.phase === 'reveal' ? Math.max(0, r.boardUntil - Date.now()) : 0,
   }
 }
 
@@ -277,14 +282,20 @@ export function dashOf(r: Room) {
   const cur = q(r)
   const wrong = new Map<string, number>()
   const credit: Record<string, number> = {}
+  const picks: Record<string, string> = {} // qué respondió cada uno (texto, solo donde se lee como frase)
+  const secs: Record<string, number> = {} // en cuántos segundos respondió
   for (const [id, a] of r.answers) {
     credit[id] = a.credit
-    const label = cur && a.credit < 1 ? answerLabel(cur, a.value) : undefined
-    if (label) wrong.set(label, (wrong.get(label) ?? 0) + 1)
+    secs[id] = Math.max(0, Math.round((a.at - r.qStart) / 100) / 10)
+    const label = cur ? answerLabel(cur, a.value) : undefined
+    if (label) picks[id] = label
+    if (label && a.credit < 1) wrong.set(label, (wrong.get(label) ?? 0) + 1)
   }
   return {
     answered: [...r.answers.keys()],
     credit,
+    picks,
+    secs,
     key: r.phase === 'question' || r.phase === 'reveal' ? cur : undefined,
     dist: cur ? distOf(cur, r.answers) : undefined, // cuántos eligieron cada opción, EN VIVO (a los estudiantes solo les llega al revelar)
     wrong: topWrong(wrong),
@@ -400,7 +411,7 @@ export function setAuto(r: Room, auto: boolean, secs?: number) {
   if (r.mode !== 'live') return
   r.auto = auto
   if (secs !== undefined && Number.isFinite(secs)) r.pauseMs = Math.max(1, Math.min(60, Math.round(secs))) * 1000
-  if (r.phase === 'reveal') auto ? scheduleAuto(r) : clearTimeout(r.autoTimer)
+  if (r.phase === 'reveal' && !r.boardUntil) auto ? scheduleAuto(r) : clearTimeout(r.autoTimer)
   broadcast(r)
 }
 
@@ -448,6 +459,13 @@ export function next(r: Room) {
   clearTimeout(r.autoTimer)
   if (r.phase === 'question') return reveal(r) // "siguiente" durante la pregunta = cerrar y mostrar
   if (r.phase === 'podium') return
+  // entre el reveal y la siguiente pregunta: 5 s de tabla de posiciones (un segundo "siguiente" del profe la salta)
+  if (r.phase === 'reveal' && !r.boardUntil && r.players.size >= 2 && r.index < r.lesson.questions.length - 1) {
+    r.boardUntil = Date.now() + BOARD_MS
+    r.autoTimer = setTimeout(() => next(r), BOARD_MS)
+    return broadcast(r)
+  }
+  r.boardUntil = 0
   r.index++
   r.answers.clear()
   r.hides.clear()

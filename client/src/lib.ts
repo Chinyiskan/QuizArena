@@ -50,10 +50,10 @@ socket.on('disconnect', (reason) => void (reason === 'io server disconnect' && s
 export function useRoom<T extends RoomView = LiveView>(onConnect: () => void) {
   const cb = useRef(onConnect)
   cb.current = onConnect
-  const [state, setState] = useState<(T & { deadline: number; autoDeadline: number; at: number }) | null>(null)
+  const [state, setState] = useState<(T & { deadline: number; autoDeadline: number; boardDeadline: number; at: number }) | null>(null)
   const [closed, setClosed] = useState(false)
   useEffect(() => {
-    const onState = (s: T) => setState({ ...s, at: performance.now(), deadline: performance.now() + ('leftMs' in s ? s.leftMs : 0), autoDeadline: performance.now() + ('autoLeftMs' in s ? s.autoLeftMs : 0) })
+    const onState = (s: T) => setState({ ...s, at: performance.now(), deadline: performance.now() + ('leftMs' in s ? s.leftMs : 0), autoDeadline: performance.now() + ('autoLeftMs' in s ? s.autoLeftMs : 0), boardDeadline: performance.now() + ('boardMs' in s ? s.boardMs : 0) })
     const onClosed = () => setClosed(true)
     const onConn = () => cb.current()
     socket.on('state', onState).on('closed', onClosed).on('connect', onConn)

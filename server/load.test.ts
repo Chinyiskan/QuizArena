@@ -25,7 +25,7 @@ await until(() => state?.players.length === N)
 
 const lat: number[] = []
 for (let r = 0; r < 3; r++) {
-  host.emit('host:next', pin)
+  host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
   await until(() => state.phase === 'question' && state.index === r)
   assert.equal(state.question.data.correct, -1, 'no se filtra la respuesta')
   const t0 = Date.now()
@@ -35,7 +35,7 @@ for (let r = 0; r < 3; r++) {
   const sc = state.players.map((p: any) => p.score)
   assert.deepEqual(sc, [...sc].sort((a, b) => b - a), 'ranking ordenado')
 }
-host.emit('host:next', pin)
+host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
 await until(() => state.phase === 'podium')
 assert.equal(state.players.length, N)
 

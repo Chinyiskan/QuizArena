@@ -24,7 +24,7 @@ await until(() => s.style === 'bomb')
 
 let booms = 0
 for (let i = 0; i < 12; i++) {
-  host.emit('host:next', pin)
+  host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
   await until(() => s.phase === 'podium' || (s.phase === 'question' && s.index === i))
   if (s.phase === 'podium') break
   if (i === 0) {

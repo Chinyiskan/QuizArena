@@ -8,6 +8,7 @@ initGame({ to: () => ({ emit() {} }), sockets: { adapter: { rooms: new Map([['*:
 const mcq = (id: string) => ({ id, type: 'mcq' as const, prompt: id, time: 20, points: 1000, data: { options: ['a', 'b', 'c', 'd'], correct: 1 } })
 const lesson = { id: 'l', updatedAt: 0, title: 'motor', emoji: 'flask', folder: '', cover: '', questions: [mcq('1'), mcq('2'), mcq('3'), mcq('4')] }
 
+const nextQ = (r: Parameters<typeof next>[0]) => (next(r), next(r)) // reveal -> tabla de posiciones -> pregunta (el 2.º next salta los 5 s)
 function setup() {
   const r = getRoom(createRoom(lesson))!
   const [lead, thief, other] = ['Líder', 'Ladrón', 'Otro'].map((n) => addPlayer(r, n, 'pix:fox') as Exclude<ReturnType<typeof addPlayer>, 'locked'>)
@@ -22,7 +23,7 @@ function setup() {
 {
   const { r, lead, thief, other } = setup()
   const before = lead.score
-  next(r) // pregunta 2
+  nextQ(r) // pregunta 2
   thief.power = 'steal'
   usePower(r, thief.id)
   assert.equal(thief.armed, 'steal')
@@ -38,7 +39,7 @@ function setup() {
 {
   const { r, lead, thief, other } = setup()
   const before = lead.score
-  next(r)
+  nextQ(r)
   thief.power = 'steal'; usePower(r, thief.id)
   lead.power = 'shield'; usePower(r, lead.id)
   answer(r, lead.id, 0); answer(r, thief.id, 1); answer(r, other.id, 0)
@@ -50,7 +51,7 @@ function setup() {
 {
   const { r, lead, thief, other } = setup()
   const before = lead.score
-  next(r)
+  nextQ(r)
   lead.power = 'bet'; usePower(r, lead.id)
   other.power = 'bet'; usePower(r, other.id)
   answer(r, lead.id, 0); answer(r, thief.id, 0); answer(r, other.id, 1)
@@ -61,7 +62,7 @@ function setup() {
 // Doble y Escudo de racha
 {
   const { r, lead, thief, other } = setup()
-  next(r)
+  nextQ(r)
   lead.power = 'x2'; usePower(r, lead.id)
   thief.streak = 3; thief.power = 'shield'; usePower(r, thief.id)
   answer(r, lead.id, 1); answer(r, thief.id, 0); answer(r, other.id, 1)
@@ -70,3 +71,12 @@ function setup() {
 }
 console.log('ok')
 process.exit(0)
+
+// Tabla de posiciones: el reveal pasa por 5 s de tabla antes de la pregunta (un segundo next la salta)
+{
+  const { r } = setup()
+  next(r)
+  assert.ok(r.boardUntil > Date.now() && r.phase === 'reveal', 'primero la tabla')
+  next(r)
+  assert.ok(r.phase === 'question' && r.boardUntil === 0, 'el 2.º next la salta')
+}

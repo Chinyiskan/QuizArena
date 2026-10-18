@@ -181,7 +181,7 @@ export default function Control({ s, d, left, header, controls, extra, onKick }:
 
           {s.players.length === 0 && <p className="m-auto p-6 text-center font-bold opacity-60">Aún no hay estudiantes.</p>}
           {s.players.length > 0 && rows.length === 0 && <p className="m-auto p-6 text-center font-bold opacity-60">{filter === 'pending' ? 'Todos respondieron.' : 'Nadie en este grupo.'}</p>}
-          <ol className={`grid min-h-0 flex-1 auto-rows-min content-start gap-2 overflow-y-auto p-1 ${dense ? 'grid-cols-[repeat(auto-fill,minmax(clamp(10.5rem,11vw,14rem),1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))]'}`}>
+          <ol className={`grid min-h-0 flex-1 auto-rows-min content-start gap-2 overflow-y-auto p-1 ${dense ? 'grid-cols-[repeat(auto-fill,minmax(clamp(10.5rem,11vw,14rem),1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]'}`}>
             {rows.map((p) => {
               const st = sts.get(p)!
               const gain = s.gained[p.id]
@@ -200,8 +200,15 @@ export default function Control({ s, d, left, header, controls, extra, onKick }:
                       <span className="truncate">{dense ? SHORT[st.key] : st.label}</span>
                       <span className="ml-auto shrink-0 font-display text-lg leading-none tabular-nums">{p.score}</span>
                     </div>
+                    {d?.picks[p.id] && (
+                      <div className="mt-1 flex items-start gap-1.5 rounded-md bg-edge/15 px-1.5 py-0.5 text-xs font-bold leading-snug" title={d.picks[p.id]}>
+                        <span className="line-clamp-2 min-w-0 flex-1 break-words">{d.picks[p.id]}</span>
+                        {!dense && <span className="shrink-0 tabular-nums opacity-70">{d.secs[p.id]}s</span>}
+                      </div>
+                    )}
+                    {!d?.picks[p.id] && answered.has(p.id) && <div className="mt-1 text-xs font-bold opacity-70">Respondió{dense ? '' : ` en ${d?.secs[p.id]}s`}</div>}
                   </div>
-                  {reveal && !!gain && <span className="absolute -top-2 -right-1.5 rounded-full border-2 border-edge bg-paper px-1.5 font-display text-[11px] leading-5 text-edge group-hover:hidden group-focus-within:hidden">{gain > 0 ? '+' : '−'}{Math.abs(gain)}</span>}
+                  {reveal && !!gain &&<span className="absolute -top-2 -right-1.5 rounded-full border-2 border-edge bg-paper px-1.5 font-display text-[11px] leading-5 text-edge group-hover:hidden group-focus-within:hidden">{gain > 0 ? '+' : '−'}{Math.abs(gain)}</span>}
                   <button type="button" className="absolute -top-2 -right-1.5 hidden h-6 w-6 place-items-center rounded-full border-2 border-edge bg-pink text-white group-hover:grid group-focus-within:grid" onClick={() => onKick(p)} aria-label={`Sacar a ${p.name}`} title="Sacar de la partida"><X /></button>
                 </motion.li>
               )

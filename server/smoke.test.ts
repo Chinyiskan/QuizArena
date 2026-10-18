@@ -46,7 +46,7 @@ const j2 = await ack(p2, 'player:join', pin, 'Beto', 'pix:fox', undefined)
 assert.ok(j1.id && j2.id)
 await until(() => state?.players.length === 2)
 
-host.emit('host:next', pin)
+host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
 await until(() => state.phase === 'question')
 assert.equal(state.question.data.correct, -1, 'no se filtra la respuesta')
 p1.emit('player:answer', 1) // correcta
@@ -82,7 +82,7 @@ const rounds: [unknown, unknown][] = [
   [['sol'], ['luna']], // drag
 ]
 for (const [i, [a1, a2]] of rounds.entries()) {
-  host.emit('host:next', pin)
+  host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
   await until(() => state.phase === 'question' && state.index === i + 1)
   if (i === 0) { // más tiempo: la cuenta sube ~10 s
     host.emit('host:time', pin, 10)
@@ -116,7 +116,7 @@ for (const [i, [a1, a2]] of rounds.entries()) {
     assert.ok(g1 > 0 && g2 > 0 && g2 < g1, `parcial proporcional (${g1} vs ${g2})`)
   }
 }
-host.emit('host:next', pin)
+host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
 await until(() => state.phase === 'podium')
 assert.equal(state.players[0].name, 'Ana')
 

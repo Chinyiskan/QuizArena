@@ -9,6 +9,7 @@ import { POWERS, STYLES } from '../../../shared/powers.ts'
 import { Avatar, Board, Confetti, Explanation, CodeBlock, Logo, NextIn, Passage, Ring, Screen, MusicButton, SoundButton } from '../ui.tsx'
 import { PIXEL_NAMES } from '../pixel.tsx'
 import { registry } from '../types/registry.tsx'
+import { Standings } from '../standings.tsx'
 import HwPlay from './HwPlay.tsx'
 import { Game, Hand, Medal, Party, Question, Rocket, Star, StatusIcon, Wave } from '../icons.tsx'
 
@@ -225,7 +226,11 @@ export default function Play() {
         </>
       )}
 
-      {s?.phase === 'reveal' && q && R && (
+      {s?.phase === 'reveal' && s.boardMs > 0 && (
+        <Standings key={s.index} players={s.players} gained={s.gained} meId={me.id} index={s.index} total={s.total} deadline={s.boardDeadline} />
+      )}
+
+      {s?.phase === 'reveal' && s.boardMs === 0 && q && R && (
         <>
           {boomed && <Explosion key={s.index} />}
           {boomed ? <BoomCard /> : wasOut ? <SpectatorCard /> : (

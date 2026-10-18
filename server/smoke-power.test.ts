@@ -23,7 +23,7 @@ async function room(powers: boolean) {
   if (!powers) host.emit('host:style', pin, 'classic')
   const until = async (f: () => boolean) => { for (let i = 0; i < 100 && !f(); i++) await new Promise((r) => setTimeout(r, 30)); assert.ok(f(), 'timeout') }
   const round = async (i: number, beforeAnswer?: () => Promise<void>) => {
-    host.emit('host:next', pin)
+    host.emit('host:next', pin); host.emit('host:next', pin) // el 1.º abre la tabla de posiciones, el 2.º la salta
     await until(() => box.s.phase === 'question' && box.s.index === i)
     await beforeAnswer?.()
     a.emit('player:answer', 1) // Ana siempre acierta; Beto va detrás
