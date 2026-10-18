@@ -459,7 +459,7 @@ export function next(r: Room) {
   if (r.phase === 'question') return reveal(r) // "siguiente" durante la pregunta = cerrar y mostrar
   if (r.phase === 'podium') return
   // entre el reveal y la siguiente pregunta: 5 s de tabla de posiciones (un segundo "siguiente" del profe la salta)
-  if (r.phase === 'reveal' && !r.boardUntil && r.players.size >= 2 && r.index < r.lesson.questions.length - 1) {
+  if (r.phase === 'reveal' && !r.boardUntil && r.index < r.lesson.questions.length - 1) {
     r.boardUntil = Date.now() + BOARD_MS
     r.autoTimer = setTimeout(() => next(r), BOARD_MS)
     return broadcast(r)
