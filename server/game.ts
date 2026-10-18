@@ -397,12 +397,11 @@ function reveal(r: Room) {
   broadcast(r)
 }
 
-/** Modo automático: tras el reveal espera `pauseMs` (+ tiempo para leer la explicación) y avanza solo. */
+/** Modo automático: tras el reveal espera exactamente `pauseMs` y avanza solo (luego vienen los 5 s de la tabla de posiciones). */
 function scheduleAuto(r: Room) {
   clearTimeout(r.autoTimer)
   if (!r.auto || r.phase !== 'reveal') return
-  const exp = q(r)?.explanation
-  const ms = r.pauseMs + (exp ? Math.min(8000, exp.length * 50) : 0)
+  const ms = r.pauseMs
   r.autoAt = Date.now() + ms
   r.autoTimer = setTimeout(() => next(r), ms)
 }

@@ -120,7 +120,7 @@ Regla de oro para todos: cambio mínimo que funcione, reutilizar lo que ya exist
 
 ## Convenciones: modo automático y explicaciones
 
-- **Modo automático (solo en vivo)**: el profe elige Manual o Automático en el lobby y puede cambiarlo en cualquier momento (evento `host:auto`, solo el host). En automático, tras cada reveal el servidor avanza solo después de `pauseMs` (5/8/12/20 s a elegir) **más tiempo para leer la explicación** (50 ms por carácter, máx. 8 s). El profe puede saltar con "Siguiente" o "Pausar automático". La cuenta regresiva viaja como `autoLeftMs` (relativo, igual que `leftMs`). Empezar la partida sigue siendo manual.
+- **Modo automático (solo en vivo)**: el profe elige Manual o Automático en el lobby y puede cambiarlo en cualquier momento (evento `host:auto`, solo el host). En automático, tras cada reveal el servidor avanza solo después de `pauseMs` (5/8/12/20 s a elegir) (exacto, sin tiempo extra por la explicación) y luego 5 s de tabla de posiciones. El profe puede saltar con "Siguiente" o "Pausar automático". La cuenta regresiva viaja como `autoLeftMs` (relativo, igual que `leftMs`). Empezar la partida sigue siendo manual.
 - **Explicación**: campo opcional `explanation` en cualquier pregunta. `hideAnswer` la oculta mientras se responde; se muestra en el reveal (celular y proyector) y en el feedback de tareas.
 - **Reveal en el celular**: banner de resultado, panel Posición/Puntos, distancia al de arriba, la **respuesta correcta solo para quien no acertó del todo**, la explicación para todos, el ranking (con la fila propia aunque esté fuera del top 5) y la cuenta del automático.
 
