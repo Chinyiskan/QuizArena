@@ -3,7 +3,7 @@
 Pegar esto (o decir "lee CONTEXTO-DIA-7.md") en un chat nuevo abierto en `D:\QuizArena`. El detalle técnico vive en `AGENTS.md` (se carga solo vía `CLAUDE.md`); este archivo resume **qué hay, qué falta y qué trampas ya conocemos**.
 
 ## Qué es
-Suite de repaso estilo Kahoot + Wayground para **un solo profe** (uso personal, free tier). El profe crea lecciones en `/admin`, lanza una partida en vivo o una tarea, comparte `/play/PIN` y los estudiantes entran desde el celular con nombre y avatar. Corre en su laptop y se expone con Cloudflare Tunnel. Sin cuentas ni pagos; el profe entra con un token (`ADMIN_TOKEN`, por defecto `arena`).
+Suite de repaso estilo Kahoot + Wayground para **un solo profe** (uso personal, free tier). El profe crea lecciones en `/admin`, lanza una partida en vivo o una tarea, comparte `/play/PIN` y los estudiantes entran desde el celular con nombre y avatar. Corre en su laptop y se expone con Cloudflare Tunnel. Sin cuentas ni pagos; el profe entra con contraseña + 2FA opcional (`ADMIN_PASSWORD`, `ADMIN_TOTP_SECRET` en `.env`).
 
 Stack: Vite + React 19 + TS + Tailwind v4 + motion + lucide-react + dnd-kit · Fastify + Socket.IO + `node:sqlite` · Zod. **Solo pnpm (npm/npx prohibidos).**
 
@@ -22,7 +22,7 @@ Stack: Vite + React 19 + TS + Tailwind v4 + motion + lucide-react + dnd-kit · F
 ## Qué falta: DÍA 7 = pulido, responsive y prueba con un grupo real
 
 ### 1. Verificaciones que NUNCA se han hecho (prioridad alta)
-- [ ] **Cloudflare Tunnel real**: `cloudflared` no está probado. Seguir `GUIA-CLASE.md` y abrir el link público desde un celular con **datos móviles**. Cambiar `ADMIN_TOKEN`.
+- [ ] **Cloudflare Tunnel real**: `cloudflared` no está probado. Seguir `GUIA-CLASE.md` y abrir el link público desde un celular con **datos móviles**. Definir `ADMIN_PASSWORD` en `.env` (`pnpm totp`).
 - [ ] **Dedos reales**: arrastre (reordenar, categorizar, arrastra y suelta) y escritura (huecos, tabla) en un celular físico, Android e iPhone. En iOS revisar zoom al enfocar inputs (<16 px) y alturas `dvh`.
 - [ ] **Carga**: `pnpm bots <PIN> 30` en vivo y en tarea; revisar fluidez, orden del ranking con 30+ y el proyector a 1080p.
 - [ ] **Sonido** (nunca se ha oído, solo se probó que no rompa) y **confeti/podio** a ojo humano.
