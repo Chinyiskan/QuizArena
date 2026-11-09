@@ -11,7 +11,7 @@ import { PIXEL_NAMES } from '../pixel.tsx'
 import { registry } from '../types/registry.tsx'
 import { Standings } from '../standings.tsx'
 import HwPlay from './HwPlay.tsx'
-import { Game, Hand, Medal, Party, Question, Rocket, Star, StatusIcon, Wave } from '../icons.tsx'
+import { Game, Hand, Shuffle, Medal, Party, Question, Rocket, Star, StatusIcon, Wave } from '../icons.tsx'
 
 type Me = { id?: string; key?: string; name: string; avatar: string } // key: secreta, prueba que este celular es este jugador al reconectar
 const KEY = (pin: string) => `qa-player-${pin}`
@@ -61,6 +61,9 @@ function JoinForm({ pin, onJoin, error }: { pin: string; onJoin: (m: Me) => void
           </button>
         ))}
       </div>
+      <button type="button" className="btn btn-ghost w-full" disabled={!free.length} onClick={() => setAvatar(free[Math.floor(Math.random() * free.length)])}>
+        <Shuffle /> Personaje aleatorio
+      </button>
       {error && <p className="text-center font-bold text-pink" role="alert">{error}</p>}
       <button className="btn btn-pink btn-big w-full" disabled={!name.trim() || !avatar}>¡Listo! <Game /></button>
     </form>

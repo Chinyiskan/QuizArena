@@ -38,11 +38,14 @@ type Room = { pin: string; title: string; mode: 'live' | 'homework'; players: nu
 
 const pick = ({ title, emoji, folder, cover, questions }: Lesson) => ({ title, emoji, folder, cover, questions })
 
-function download(l: Lesson) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(pick(l), null, 2)], { type: 'application/json' }))
-  Object.assign(document.createElement('a'), { href: url, download: `${l.title.replace(/[^\w\-áéíóúñ ]+/gi, '').trim() || 'leccion'}.json` }).click()
+function save(data: unknown, name: string) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+  Object.assign(document.createElement('a'), { href: url, download: `${name}.json` }).click()
   URL.revokeObjectURL(url)
 }
+const download = (l: Lesson) => save(pick(l), l.title.replace(/[^\w\-áéíóúñ ]+/gi, '').trim() || 'leccion')
+// un arreglo de lecciones: el mismo formato que "Importar" ya acepta
+const downloadAll = (ls: Lesson[]) => save(ls.map(pick), `quizarena-lecciones-${new Date().toISOString().slice(0, 10)}`)
 
 export default function Admin() {
   const [ok, setOk] = useState(true) // si la sesión no vale, /lessons responde 401 y aparece el login
@@ -121,6 +124,9 @@ export default function Admin() {
           </Link>
           <button className="btn btn-ghost" onClick={() => file.current?.click()}>
             <Upload /> Importar
+          </button>
+          <button className="btn btn-ghost" disabled={!list?.length} onClick={() => downloadAll(list ?? [])}>
+            <Download /> Exportar todo
           </button>
           <Link to="/admin/lessons/new" className="btn btn-pink">
             + Nueva lección
